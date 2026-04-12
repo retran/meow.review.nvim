@@ -21,26 +21,24 @@
 -- THE SOFTWARE.
 --
 -- @file: lua/meow/review/signs.lua
--- @brief: Sign column placement and extmark-based position drift tracking.
+-- @brief: Sign column placement via extmark sign_text API (Neovim 0.10+).
 -- @author: Andrew Vasilyev
 -- @license: MIT
 
 ---@mod meow.review.signs
 local M = {}
 
---- Extmark namespace for position drift tracking. Used by store.lua too.
+--- Extmark namespace for all signs and position drift tracking.
 M.NS = vim.api.nvim_create_namespace("meow_review")
 
-local SIGN_GROUP = "meow_review"
-
---- Register sign definitions. Called once from init.lua setup().
---- Also ensures highlight links are established for newly defined types.
+--- Register highlight groups. Called once from init.lua setup().
 function M.setup_signs()
     require("meow.review.types").setup_highlights()
 end
 
 --- Place a sign and a tracking extmark for one annotation in bufnr.
---- Populates annotation.extmark_id, annotation.sign_id, and annotation.bufnr (runtime fields).
+--- Uses nvim_buf_set_extmark with sign_text/sign_hl_group (Neovim 0.10+).
+--- Populates annotation.extmark_id and annotation.bufnr (runtime fields).
 ---@param annotation meow.review.Annotation
 ---@param bufnr number
 function M.place(annotation, bufnr)
@@ -58,24 +56,14 @@ function M.place(annotation, bufnr)
         end
     end
 
-    -- Sign column icon (below diagnostics priority = 10, above default = 0)
-    local sign_id = vim.fn.sign_place(0, SIGN_GROUP, t.sign_name, bufnr, {
-        lnum = annotation.lnum,
+    -- Place extmark with sign_text/sign_hl_group.
+    -- col=-1 is the canonical column for sign extmarks (no position conflict with text extmarks).
+    local ok, extmark_id = pcall(vim.api.nvim_buf_set_extmark, bufnr, M.NS, annotation.lnum - 1, -1, {
+        id = annotation.extmark_id or nil, -- reuse id when re-placing
+        sign_text = t.icon,
+        sign_hl_group = t.hl,
         priority = 5,
     })
-    if sign_id and sign_id > 0 then
-        annotation.sign_id = sign_id
-    end
-
-    -- Extmark for position drift tracking (no visible glyph)
-    local ok, extmark_id = pcall(
-        vim.api.nvim_buf_set_extmark,
-        bufnr,
-        M.NS,
-        annotation.lnum - 1, -- 0-based
-        0,
-        { id = annotation.extmark_id or nil } -- reuse id when re-placing
-    )
 
     if ok then
         annotation.extmark_id = extmark_id
@@ -83,17 +71,12 @@ function M.place(annotation, bufnr)
     end
 end
 
---- Remove sign and extmark for one annotation from bufnr.
+--- Remove extmark (sign + tracker) for one annotation from bufnr.
 ---@param annotation meow.review.Annotation
 ---@param bufnr number
 function M.unplace(annotation, bufnr)
     if not bufnr or not vim.api.nvim_buf_is_valid(bufnr) then
         return
-    end
-
-    if annotation.sign_id and annotation.sign_id > 0 then
-        pcall(vim.fn.sign_unplace, SIGN_GROUP, { buffer = bufnr, id = annotation.sign_id })
-        annotation.sign_id = nil
     end
 
     if annotation.extmark_id then
@@ -123,8 +106,7 @@ function M.render_buffer(bufnr)
         rel = vim.fn.fnamemodify(abs, ":.")
     end
 
-    -- Clear existing signs and extmarks for this buffer
-    vim.fn.sign_unplace(SIGN_GROUP, { buffer = bufnr })
+    -- Clear existing extmarks (signs + trackers) for this buffer
     pcall(vim.api.nvim_buf_clear_namespace, bufnr, M.NS, 0, -1)
 
     -- Re-place all annotations for this file

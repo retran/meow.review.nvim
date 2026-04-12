@@ -232,6 +232,33 @@ function M.add_comment(is_visual)
     })
 end
 
+-- ── Edit comment ──────────────────────────────────────────────────────────────
+
+--- Edit the annotation at the cursor position.
+--- When multiple annotations overlap the cursor, opens a picker to choose.
+function M.edit_comment()
+    local candidates = store().get_at_cursor()
+
+    if #candidates == 0 then
+        vim.notify("[meow-review] No comment at cursor.", vim.log.levels.WARN)
+        return
+    end
+
+    local function do_edit(ann)
+        ui().open_edit_modal(ann, function(type_name, text)
+            store().update(ann.id, { type = type_name, text = text })
+            vim.notify("[meow-review] Comment updated.", vim.log.levels.INFO)
+        end)
+    end
+
+    if #candidates == 1 then
+        do_edit(candidates[1])
+        return
+    end
+
+    ui().open_picker(candidates, "Edit Which Comment?", do_edit)
+end
+
 -- ── Delete comment ────────────────────────────────────────────────────────────
 
 --- Delete the annotation at the cursor position.

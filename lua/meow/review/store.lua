@@ -247,6 +247,32 @@ function M.delete(id)
     return false
 end
 
+--- Update text and/or type of an annotation by id. Re-renders the sign in place.
+---@param id string
+---@param fields { text?: string, type?: string }
+---@return boolean updated
+function M.update(id, fields)
+    local signs = get_signs()
+    for _, ann in ipairs(state.annotations) do
+        if ann.id == id then
+            if fields.text ~= nil then
+                ann.text = fields.text
+            end
+            if fields.type ~= nil then
+                ann.type = fields.type
+            end
+            ann.timestamp = os.time()
+            -- Re-render sign (type icon/colour may have changed)
+            if ann.bufnr and vim.api.nvim_buf_is_valid(ann.bufnr) then
+                signs.place(ann, ann.bufnr)
+            end
+            M.save()
+            return true
+        end
+    end
+    return false
+end
+
 --- Remove all annotations and clear all signs/extmarks from every loaded buffer.
 function M.clear()
     local signs = get_signs()
@@ -256,7 +282,6 @@ function M.clear()
         end
     end
     -- Sweep every loaded buffer unconditionally (some annotations may not be rendered yet)
-    vim.fn.sign_unplace("meow_review")
     for _, bufnr in ipairs(vim.api.nvim_list_bufs()) do
         if vim.api.nvim_buf_is_loaded(bufnr) then
             pcall(vim.api.nvim_buf_clear_namespace, bufnr, signs.NS, 0, -1)

@@ -105,15 +105,11 @@ function M.setup(cfg_types, order)
     end
 end
 
---- Register sign definitions and highlight links. Called once from setup().
+--- Register highlight groups for all active annotation types.
+--- Called once from setup() via signs.setup_signs().
 function M.setup_highlights()
-    for _, t in pairs(M.types) do
-        vim.fn.sign_define(t.sign_name, {
-            text   = t.icon,
-            texthl = t.hl,
-            numhl  = "",
-        })
-    end
+    -- No-op: highlight groups (hl field) are referenced directly in extmark sign_hl_group.
+    -- No sign_define() needed when using the extmark sign API.
 end
 
 --- Return the type definition table for a given type string, or nil.

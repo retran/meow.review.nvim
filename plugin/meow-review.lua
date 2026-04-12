@@ -31,9 +31,9 @@ if vim.g.loaded_meow_review then
 end
 vim.g.loaded_meow_review = 1
 
--- Check Neovim version compatibility
-if vim.fn.has("nvim-0.8.0") == 0 then
-    vim.api.nvim_err_writeln("meow.review.nvim requires Neovim >= 0.8.0")
+    -- Check Neovim version compatibility
+if vim.fn.has("nvim-0.11.0") == 0 then
+    vim.api.nvim_err_writeln("meow.review.nvim requires Neovim >= 0.11.0")
     return
 end
 
@@ -95,6 +95,12 @@ local subcommand_tbl = {
             require("meow.review").goto_comment()
         end,
     },
+    edit = {
+        impl = function(_, _)
+            if not check_dependencies() then return end
+            require("meow.review").edit_comment()
+        end,
+    },
     reload = {
         impl = function(_, _)
             if not check_dependencies() then return end
@@ -120,7 +126,7 @@ local function meow_review_cmd(opts)
 
     if not subcommand_key or subcommand_key == "" then
         vim.notify(
-            "Usage: :MeowReview <add|delete|view|export [name]|clear|goto|reload|next|prev>",
+            "Usage: :MeowReview <add|delete|edit|view|export [name]|clear|goto|reload|next|prev>",
             vim.log.levels.ERROR
         )
         return
@@ -141,7 +147,7 @@ end
 vim.api.nvim_create_user_command("MeowReview", meow_review_cmd, {
     nargs = "*",
     range = true,
-    desc = "Code review annotation tool (Usage: MeowReview <add|delete|view|export [name]|clear|goto|reload|next|prev>)",
+    desc = "Code review annotation tool (Usage: MeowReview <add|delete|edit|view|export [name]|clear|goto|reload|next|prev>)",
     complete = function(arg_lead, cmdline, _)
         -- First arg: complete subcommand names
         if cmdline:match("^['<,'>]*MeowReview[!]*%s+%w*$") then
@@ -189,6 +195,11 @@ vim.keymap.set("n", "<Plug>(MeowReviewClear)", function()
     if not check_dependencies() then return end
     require("meow.review").clear_all()
 end, { desc = "Clear all review comments" })
+
+vim.keymap.set("n", "<Plug>(MeowReviewEdit)", function()
+    if not check_dependencies() then return end
+    require("meow.review").edit_comment()
+end, { desc = "Edit review comment" })
 
 vim.keymap.set("n", "<Plug>(MeowReviewGoto)", function()
     if not check_dependencies() then return end
