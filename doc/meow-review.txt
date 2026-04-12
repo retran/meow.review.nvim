@@ -47,7 +47,7 @@ Part of the meow.*.nvim plugin family.
 KEY FEATURES					*meow-review-features*
 
 - *Typed annotations*: ISSUE, SUGGESTION, NOTE with distinct icons and
-  highlight groups.
+  highlight groups (fully customizable via `annotation_types` config).
 - *Contextual capture*: Treesitter symbol name (function/class) attached to
   each annotation.
 - *Hunk detection*: Automatically associates annotations with git hunks
@@ -166,6 +166,17 @@ function. Here are the defaults:
 	    -- targeted, minimal fix without touching unrelated code.
 	    -- Set to "" to omit the preamble entirely.
 	    prompt_preamble = "...",  -- default: see below
+
+	    -- Custom annotation types. When provided, replaces/extends the
+	    -- built-in ISSUE / SUGGESTION / NOTE set.  Keys become the type
+	    -- names used in annotations and in Markdown export headings.
+	    -- Omit to keep the built-in set unchanged.
+	    annotation_types = nil,
+
+	    -- Tab-cycling order for the add-comment modal.
+	    -- Defaults to sorted keys when annotation_types is set, or to
+	    -- { "ISSUE", "SUGGESTION", "NOTE" } otherwise.
+	    annotation_type_order = nil,
 	})
 <
 
@@ -183,7 +194,10 @@ Configuration can also be set via the global variable before the plugin loads:
 ==============================================================================
 ANNOTATION TYPES				*meow-review-annotation-types*
 
-Three annotation types are available:
+Three annotation types are built in. All types are fully customizable via the
+`annotation_types` and `annotation_type_order` configuration keys.
+
+Built-in types ~
 
 *ISSUE*		Problem that must be fixed before the code is acceptable.
 		Icon:  | Highlight: DiagnosticError (red)
@@ -193,6 +207,32 @@ Three annotation types are available:
 
 *NOTE*		Informational observation or question.
 		Icon:  | Highlight: DiagnosticInfo (blue)
+
+Custom types ~
+
+Override or extend the built-in set via `annotation_types`:
+>
+	require("meow.review").setup({
+	    annotation_types = {
+	        ISSUE      = { icon = "", hl = "DiagnosticError",  label = "ISSUE" },
+	        SUGGESTION = { icon = "", hl = "DiagnosticWarn",   label = "SUGGESTION" },
+	        NOTE       = { icon = "", hl = "DiagnosticInfo",   label = "NOTE" },
+	        QUESTION   = { icon = "?", hl = "DiagnosticHint", label = "QUESTION" },
+	    },
+	    annotation_type_order = { "ISSUE", "SUGGESTION", "NOTE", "QUESTION" },
+	})
+<
+
+Each entry accepts:
+
+  `icon`       string  Sign column character. Defaults to built-in icon or "".
+  `hl`         string  Highlight group. Defaults to built-in hl or "Normal".
+  `label`      string  Used in Markdown headings. Defaults to the key name.
+  `sign_name`  string  Internal Neovim sign name. Defaults to "MeowReview"..key.
+
+When `annotation_types` is nil or empty, the three built-in types are used
+unchanged. When it is provided but does not include a built-in key (e.g.
+"ISSUE"), that key is dropped — only the supplied keys are active.
 
 ==============================================================================
 MAPPINGS					*meow-review-mappings*
@@ -218,7 +258,7 @@ IN-WINDOW MAPPINGS				*meow-review-in-window-mappings*
 Inside the add modal, the following keys are available:
 
 |Key|		|Action|
-|<Tab>|		Cycle annotation type: ISSUE → SUGGESTION → NOTE → ISSUE.
+|<Tab>|		Cycle annotation type (ISSUE → SUGGESTION → NOTE → … by default).
 |<CR>|		Confirm and save the annotation.
 |<Esc>|		Cancel (no annotation added).
 |<C-c>|		Cancel.
@@ -250,7 +290,7 @@ When adding a comment, a nui.Input modal opens. The current annotation type
 is displayed in the modal prompt prefix.
 
 |Key|		|Action|
-|<Tab>|		Cycle annotation type: ISSUE → SUGGESTION → NOTE → ISSUE.
+|<Tab>|		Cycle annotation type (ISSUE → SUGGESTION → NOTE → … by default).
 |<CR>|		Confirm and save the annotation.
 |<Esc>|		Cancel (no annotation added).
 |<C-c>|		Cancel.
@@ -361,16 +401,20 @@ review.setup({opts})
 	{opts} is merged into |vim.g.meow_review|.
 
 	Accepted keys:
-	  `context_lines`        number    Lines of context captured above/below
-	                                 (default: 3)
-	  `disabled_exporters`   string[]  Built-in exporter names to skip
-	                                 (default: {})
-	  `default_exporter`     string    Exporter used by bare `:MeowReview export`
-	                                 (default: "clipboard")
-	  `export_filename`      string    Filename for `file` / `file_prompt` exporters
-	                                 (default: ".meow-review.md")
-	  `prompt_preamble`      string    Preamble text in exported Markdown
-	                                 (see |meow-review-configuration|)
+	  `context_lines`          number    Lines of context captured above/below
+	                                   (default: 3)
+	  `disabled_exporters`     string[]  Built-in exporter names to skip
+	                                   (default: {})
+	  `default_exporter`       string    Exporter used by bare `:MeowReview export`
+	                                   (default: "clipboard")
+	  `export_filename`        string    Filename for `file` / `file_prompt` exporters
+	                                   (default: ".meow-review.md")
+	  `prompt_preamble`        string    Preamble text in exported Markdown
+	                                   (see |meow-review-configuration|)
+	  `annotation_types`       table     Custom annotation type definitions
+	                                   (see |meow-review-annotation-types|)
+	  `annotation_type_order`  string[]  Tab-cycling order for the add-modal
+	                                   (see |meow-review-annotation-types|)
 
 						*meow.review.add_comment()*
 review.add_comment()

@@ -25,7 +25,7 @@ Ever find yourself leaving scattered notes for your AI coding agent, only to los
 
 ## Key Features
 
-- **Typed annotations** — ISSUE, SUGGESTION, NOTE with distinct icons and highlight groups
+- **Typed annotations** — ISSUE, SUGGESTION, NOTE with distinct icons and highlight groups (fully customizable)
 - **Contextual capture** — Treesitter symbol name (function/class) attached to each annotation
 - **Hunk detection** — automatically associates annotations with git hunks (gitsigns) or vimdiff hunks
 - **JSON persistence** — `.meow-review.json` at the project root; survives Neovim restarts
@@ -154,6 +154,20 @@ require("meow.review").setup({
         .. "For each annotation, read the code snippet and comment carefully, "
         .. "then apply the requested fix directly to the file. "
         .. "Prefer minimal, targeted edits. Do not refactor unrelated code.",
+
+    -- Custom annotation types. When provided, replaces/extends the built-in
+    -- ISSUE / SUGGESTION / NOTE set. Keys are the type names used in
+    -- annotations and in the exported Markdown heading.
+    -- Each entry can override: icon, hl (highlight group), label, sign_name.
+    -- Missing fields fall back to the built-in defaults for that key (if any)
+    -- or to sensible values ("", "Normal", key, "MeowReview"..key).
+    annotation_types = nil,   -- default: { ISSUE = …, SUGGESTION = …, NOTE = … }
+
+    -- Tab-cycling order for the add-comment modal. Must contain valid keys
+    -- from annotation_types (or the built-in set when annotation_types is nil).
+    -- Defaults to sorted keys when annotation_types is set, or the built-in
+    -- order (ISSUE → SUGGESTION → NOTE) when annotation_types is nil.
+    annotation_type_order = nil,  -- default: { "ISSUE", "SUGGESTION", "NOTE" }
 })
 ```
 
@@ -168,6 +182,54 @@ vim.g.meow_review = {
     prompt_preamble = "Fix the issues below. Keep changes minimal.",
 }
 ```
+
+### Annotation Types
+
+The built-in annotation types (ISSUE, SUGGESTION, NOTE) can be fully replaced or
+extended through the `annotation_types` and `annotation_type_order` config keys.
+
+#### Keeping the defaults (no config needed)
+
+```lua
+require("meow.review").setup({})
+-- ISSUE, SUGGESTION, NOTE — built-in icons and highlight groups
+```
+
+#### Adding a custom type alongside the defaults
+
+```lua
+require("meow.review").setup({
+    annotation_types = {
+        ISSUE      = { icon = "", hl = "DiagnosticError",   label = "ISSUE" },
+        SUGGESTION = { icon = "", hl = "DiagnosticWarn",    label = "SUGGESTION" },
+        NOTE       = { icon = "", hl = "DiagnosticInfo",    label = "NOTE" },
+        QUESTION   = { icon = "?", hl = "DiagnosticHint",  label = "QUESTION" },
+    },
+    annotation_type_order = { "ISSUE", "SUGGESTION", "NOTE", "QUESTION" },
+})
+```
+
+#### Replacing the entire type set
+
+```lua
+require("meow.review").setup({
+    annotation_types = {
+        BUG      = { icon = "", hl = "DiagnosticError", label = "BUG" },
+        FEEDBACK = { icon = "", hl = "DiagnosticInfo",  label = "FEEDBACK" },
+    },
+    annotation_type_order = { "BUG", "FEEDBACK" },
+})
+```
+
+Each annotation type entry accepts:
+
+| Field | Type | Default | Description |
+| ----- | ---- | ------- | ----------- |
+| `icon` | `string` | built-in icon or `""` | Sign column character |
+| `hl` | `string` | built-in hl or `"Normal"` | Highlight group for the sign |
+| `label` | `string` | key name | Label used in the exported Markdown heading |
+| `sign_name` | `string` | `"MeowReview" .. key` | Internal Neovim sign name |
+
 
 ### Keymaps
 
@@ -211,7 +273,7 @@ When adding a comment, a modal opens with:
 
 | Key | Action |
 | --- | ------ |
-| `<Tab>` | Cycle annotation type: ISSUE → SUGGESTION → NOTE → ISSUE |
+| `<Tab>` | Cycle annotation type (ISSUE → SUGGESTION → NOTE → … by default) |
 | `<CR>` | Confirm and save the annotation |
 | `<Esc>` / `<C-c>` | Cancel |
 

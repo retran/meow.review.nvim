@@ -28,8 +28,9 @@
 ---@mod meow.review.types
 local M = {}
 
+--- Default annotation type definitions.
 ---@type table<string, { icon: string, hl: string, sign_name: string, label: string }>
-M.types = {
+local DEFAULT_TYPES = {
     ISSUE = {
         icon = "",
         hl = "DiagnosticError",
@@ -50,17 +51,67 @@ M.types = {
     },
 }
 
---- Tab-cycling order for the add-comment modal.
+--- Default tab-cycling order.
 ---@type string[]
-M.order = { "ISSUE", "SUGGESTION", "NOTE" }
+local DEFAULT_ORDER = { "ISSUE", "SUGGESTION", "NOTE" }
+
+--- Active type definitions (set by setup()).
+---@type table<string, { icon: string, hl: string, sign_name: string, label: string }>
+M.types = vim.deepcopy(DEFAULT_TYPES)
+
+--- Active tab-cycling order (set by setup()).
+---@type string[]
+M.order = vim.deepcopy(DEFAULT_ORDER)
+
+--- Initialise annotation types from configuration.
+--- Called once from `init.lua` during `setup()`.
+---
+--- Each entry in {cfg_types} is a table:
+---   { icon = "…", hl = "HighlightGroup", label = "NAME" }
+---
+--- The key is the type name used in annotations (e.g. "ISSUE").
+--- `sign_name` is derived automatically as "MeowReview" .. key if not provided.
+--- `order` controls the Tab-cycling sequence; defaults to sorted keys if omitted.
+---@param cfg_types? table<string, { icon?: string, hl?: string, label?: string, sign_name?: string }>
+---@param order? string[]
+function M.setup(cfg_types, order)
+    if not cfg_types or vim.tbl_isempty(cfg_types) then
+        -- Restore defaults (handles repeated setup() calls)
+        M.types = vim.deepcopy(DEFAULT_TYPES)
+        M.order = vim.deepcopy(DEFAULT_ORDER)
+        return
+    end
+
+    -- Build type table: merge each user entry over its default (if any).
+    local resolved = {}
+    for key, def in pairs(cfg_types) do
+        local default = DEFAULT_TYPES[key] or {}
+        resolved[key] = {
+            icon      = def.icon      or default.icon      or "",
+            hl        = def.hl        or default.hl        or "Normal",
+            label     = def.label     or default.label     or key,
+            sign_name = def.sign_name or default.sign_name or ("MeowReview" .. key),
+        }
+    end
+    M.types = resolved
+
+    -- Build order: use provided order, falling back to sorted keys.
+    if order and #order > 0 then
+        M.order = order
+    else
+        local keys = vim.tbl_keys(resolved)
+        table.sort(keys)
+        M.order = keys
+    end
+end
 
 --- Register sign definitions and highlight links. Called once from setup().
 function M.setup_highlights()
     for _, t in pairs(M.types) do
         vim.fn.sign_define(t.sign_name, {
-            text = t.icon,
+            text   = t.icon,
             texthl = t.hl,
-            numhl = "",
+            numhl  = "",
         })
     end
 end

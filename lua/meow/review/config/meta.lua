@@ -30,7 +30,7 @@
 ---@field file string Relative file path from the project root.
 ---@field lnum number 1-based start line number.
 ---@field end_lnum number 1-based end line number.
----@field type "ISSUE"|"SUGGESTION"|"NOTE" Annotation type.
+---@field type string Annotation type key (e.g. "ISSUE", "SUGGESTION", "NOTE", or custom).
 ---@field text string Review comment text.
 ---@field context string|nil Treesitter symbol name at annotation time, or nil.
 ---@field snippet string|nil Source lines captured around the range (with line numbers), or nil.
@@ -42,11 +42,19 @@
 
 ---@alias meow.review.ExporterFn fun(markdown: string, root: string)
 
+---@class meow.review.AnnotationType
+---@field icon? string Sign column icon character (default varies by built-in type).
+---@field hl? string Highlight group name (default varies by built-in type).
+---@field label? string Display label used in the modal and export (defaults to the key name).
+---@field sign_name? string Neovim sign name; auto-derived as "MeowReview"..key if omitted.
+
 ---@class meow.review.Config
 ---@field context_lines? number Lines of source context to capture before and after the annotated range (default 3). Set to 0 to disable snippet capture.
 ---@field disabled_exporters? string[] Built-in exporter names to disable (e.g. {"clipboard"} to disable the clipboard exporter).
 ---@field default_exporter? string Exporter to run when no name is given to `:MeowReview export` (default "clipboard").
 ---@field export_filename? string Filename written by the `file` and `file_prompt` exporters (default ".meow-review.md").
+---@field annotation_types? table<string, meow.review.AnnotationType> Custom annotation type definitions. Replaces the default set (ISSUE, SUGGESTION, NOTE) when provided.
+---@field annotation_type_order? string[] Tab-cycling order for the add-modal. Defaults to sorted keys of annotation_types.
 ---@field prompt_preamble? string Text inserted after the document heading in the exported Markdown. Defaults to an instruction that asks the AI agent to apply each annotation as a targeted fix. Set to "" to omit it.
 
 ---@type meow.review.Config | fun(): meow.review.Config | nil

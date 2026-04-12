@@ -70,6 +70,10 @@ local function cfg()
     return require("meow.review.config.internal").get()
 end
 
+local function types()
+    return require("meow.review.types")
+end
+
 -- ── Setup ─────────────────────────────────────────────────────────────────────
 
 --- Configure the plugin (optional — safe to call multiple times).
@@ -77,6 +81,10 @@ end
 function M.setup(opts)
     require("meow.review.config.meta")
     vim.g.meow_review = vim.tbl_deep_extend("force", vim.g.meow_review or {}, opts or {})
+
+    -- Initialise annotation type definitions (must run before sign setup)
+    local c = cfg()
+    types().setup(c.annotation_types, c.annotation_type_order)
 
     -- Initialise sign definitions and highlight links
     signs().setup_signs()
