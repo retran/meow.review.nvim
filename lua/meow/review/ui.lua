@@ -83,7 +83,7 @@ function M.open_add_modal(opts)
     local current_type = types.order[1]
 
     local location_str = render_location(opts)
-    local context_str = opts.context_symbol and (" ctx: " .. opts.context_symbol) or ""
+    local context_str = opts.context_symbol and (" \u{2014} " .. opts.context_symbol) or ""
     local top_label = " Add Review Comment — " .. location_str:gsub("^ ", ""):gsub(" $", "") .. context_str .. " "
 
     local popup = Popup({
@@ -96,7 +96,7 @@ function M.open_add_modal(opts)
             text = {
                 top = top_label,
                 top_align = "center",
-                bottom = render_type_line(current_type) .. "  <C-s> save · <Tab> type · <C-c> cancel ",
+                bottom = render_type_line(current_type) .. "  [<C-s>] Save  [<Tab>] Type  [<C-c>] Cancel ",
                 bottom_align = "left",
             },
         },
@@ -143,7 +143,7 @@ function M.open_add_modal(opts)
         current_type = types.next(current_type)
         popup.border:set_text(
             "bottom",
-            render_type_line(current_type) .. "  <C-s> save · <Tab> type · <C-c> cancel "
+            render_type_line(current_type) .. "  [<C-s>] Save  [<Tab>] Type  [<C-c>] Cancel "
         )
     end, { noremap = true })
 
@@ -184,7 +184,7 @@ function M.open_edit_modal(annotation, on_confirm)
             text = {
                 top = top_label,
                 top_align = "center",
-                bottom = render_type_line(current_type) .. "  <C-s> save · <Tab> type · <C-c> cancel ",
+                bottom = render_type_line(current_type) .. "  [<C-s>] Save  [<Tab>] Type  [<C-c>] Cancel ",
                 bottom_align = "left",
             },
         },
@@ -233,7 +233,7 @@ function M.open_edit_modal(annotation, on_confirm)
         current_type = types.next(current_type)
         popup.border:set_text(
             "bottom",
-            render_type_line(current_type) .. "  <C-s> save · <Tab> type · <C-c> cancel "
+            render_type_line(current_type) .. "  [<C-s>] Save  [<Tab>] Type  [<C-c>] Cancel "
         )
     end, { noremap = true })
 
@@ -289,7 +289,6 @@ function M.open_view_popup(annotation)
     end
 
     table.insert(lines, "")
-    table.insert(lines, " <q>/<Esc> to close")
 
     local height = math.min(#lines + 2, 20)
     local width = 50
@@ -297,7 +296,7 @@ function M.open_view_popup(annotation)
         if #l + 4 > width then width = #l + 4 end
     end
 
-    local type_label = string.format("[%s] %s", annotation.type, annotation.file or "")
+    local type_label = string.format("%s \u{2014} %s", annotation.type, annotation.file or "")
 
     local popup = Popup({
         position = "50%",
@@ -309,6 +308,8 @@ function M.open_view_popup(annotation)
             text = {
                 top = " " .. type_label .. " ",
                 top_align = "left",
+                bottom = " [q]/[<Esc>] Close ",
+                bottom_align = "left",
             },
         },
         win_options = {
@@ -363,7 +364,7 @@ end
 ---@param on_select fun(ann: meow.review.Annotation)
 function M.open_picker(annotations, title, on_select)
     if #annotations == 0 then
-        vim.notify("[meow-review] No annotations to show.", vim.log.levels.INFO)
+        vim.notify("MeowReview: No annotations to show.", vim.log.levels.INFO)
         return
     end
 

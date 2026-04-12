@@ -225,7 +225,7 @@ function M.add_comment(is_visual)
             local bufnr = vim.api.nvim_get_current_buf()
             signs().place(added, bufnr)
             vim.notify(
-                string.format("[meow-review] %s added at %s:%d", type_name, file or "?", lnum),
+                string.format("MeowReview: %s added at %s:%d", type_name, file or "?", lnum),
                 vim.log.levels.INFO
             )
         end,
@@ -240,14 +240,14 @@ function M.edit_comment()
     local candidates = store().get_at_cursor()
 
     if #candidates == 0 then
-        vim.notify("[meow-review] No comment at cursor.", vim.log.levels.WARN)
+        vim.notify("MeowReview: No comment at cursor.", vim.log.levels.WARN)
         return
     end
 
     local function do_edit(ann)
         ui().open_edit_modal(ann, function(type_name, text)
             store().update(ann.id, { type = type_name, text = text })
-            vim.notify("[meow-review] Comment updated.", vim.log.levels.INFO)
+            vim.notify("MeowReview: Comment updated.", vim.log.levels.INFO)
         end)
     end
 
@@ -256,7 +256,7 @@ function M.edit_comment()
         return
     end
 
-    ui().open_picker(candidates, "Edit Which Comment?", do_edit)
+    ui().open_picker(candidates, "Edit Comment", do_edit)
 end
 
 -- ── Delete comment ────────────────────────────────────────────────────────────
@@ -267,19 +267,19 @@ function M.delete_comment()
     local candidates = store().get_at_cursor()
 
     if #candidates == 0 then
-        vim.notify("[meow-review] No comment at cursor.", vim.log.levels.WARN)
+        vim.notify("MeowReview: No comment at cursor.", vim.log.levels.WARN)
         return
     end
 
     if #candidates == 1 then
         store().delete(candidates[1].id)
-        vim.notify("[meow-review] Comment deleted.", vim.log.levels.INFO)
+        vim.notify("MeowReview: Comment deleted.", vim.log.levels.INFO)
         return
     end
 
-    ui().open_picker(candidates, "Delete Which Comment?", function(ann)
+    ui().open_picker(candidates, "Delete Comment", function(ann)
         store().delete(ann.id)
-        vim.notify("[meow-review] Comment deleted.", vim.log.levels.INFO)
+        vim.notify("MeowReview: Comment deleted.", vim.log.levels.INFO)
     end)
 end
 
@@ -290,7 +290,7 @@ function M.view_comment()
     local candidates = store().get_at_cursor()
 
     if #candidates == 0 then
-        vim.notify("[meow-review] No comment at cursor.", vim.log.levels.WARN)
+        vim.notify("MeowReview: No comment at cursor.", vim.log.levels.WARN)
         return
     end
 
@@ -299,7 +299,7 @@ function M.view_comment()
         return
     end
 
-    ui().open_picker(candidates, "View Which Comment?", function(ann)
+    ui().open_picker(candidates, "View Comment", function(ann)
         ui().open_view_popup(ann)
     end)
 end
@@ -320,19 +320,19 @@ end
 function M.clear_all()
     local n = store().count()
     if n == 0 then
-        vim.notify("[meow-review] No annotations to clear.", vim.log.levels.INFO)
+        vim.notify("MeowReview: No annotations.", vim.log.levels.INFO)
         return
     end
-    local choice = vim.fn.confirm(
-        string.format("Clear all %d review comment(s)?", n),
-        "&Yes\n&No",
-        2
+    vim.ui.input(
+        { prompt = string.format("Clear all %d comment(s)? [yes/N] ", n) },
+        function(input)
+            if input and input:lower() == "yes" then
+                store().clear()
+                signs().render_all()
+                vim.notify("MeowReview: All comments cleared.", vim.log.levels.INFO)
+            end
+        end
     )
-    if choice == 1 then
-        store().clear()
-        signs().render_all()
-        vim.notify("[meow-review] All comments cleared.", vim.log.levels.INFO)
-    end
 end
 
 -- ── Go to comment picker ──────────────────────────────────────────────────────
@@ -341,7 +341,7 @@ end
 function M.goto_comment()
     local all = store().sorted()
     if #all == 0 then
-        vim.notify("[meow-review] No annotations.", vim.log.levels.INFO)
+        vim.notify("MeowReview: No annotations.", vim.log.levels.INFO)
         return
     end
     ui().open_picker(all, "Go to Comment", function(ann)
@@ -357,7 +357,7 @@ function M.reload()
     store().load(root)
     signs().render_all()
     vim.notify(
-        string.format("[meow-review] Reloaded %d comment(s).", store().count()),
+        string.format("MeowReview: Reloaded %d comment(s).", store().count()),
         vim.log.levels.INFO
     )
 end
@@ -374,7 +374,7 @@ function M._jump_to(ann)
 
     if vim.fn.filereadable(abs_path) == 0 then
         vim.notify(
-            string.format("[meow-review] File no longer exists: %s", ann.file),
+            string.format("MeowReview: File no longer exists: %s", ann.file),
             vim.log.levels.WARN
         )
         return false
@@ -397,20 +397,20 @@ function M.next_comment()
 
     local sorted = s.sorted()
     if #sorted == 0 then
-        vim.notify("[meow-review] No annotations.", vim.log.levels.INFO)
+        vim.notify("MeowReview: No annotations.", vim.log.levels.INFO)
         return
     end
 
     local ann = s.find_next(file, lnum)
     if not ann then
-        vim.notify("[meow-review] No next comment.", vim.log.levels.INFO)
+        vim.notify("MeowReview: No next comment.", vim.log.levels.INFO)
         return
     end
 
     local visited = {}
     while ann do
         if visited[ann.id] then
-            vim.notify("[meow-review] All annotation files are unreadable.", vim.log.levels.WARN)
+            vim.notify("MeowReview: All annotation files are unreadable.", vim.log.levels.WARN)
             return
         end
         visited[ann.id] = true
@@ -427,20 +427,20 @@ function M.prev_comment()
 
     local sorted = s.sorted()
     if #sorted == 0 then
-        vim.notify("[meow-review] No annotations.", vim.log.levels.INFO)
+        vim.notify("MeowReview: No annotations.", vim.log.levels.INFO)
         return
     end
 
     local ann = s.find_prev(file, lnum)
     if not ann then
-        vim.notify("[meow-review] No previous comment.", vim.log.levels.INFO)
+        vim.notify("MeowReview: No previous comment.", vim.log.levels.INFO)
         return
     end
 
     local visited = {}
     while ann do
         if visited[ann.id] then
-            vim.notify("[meow-review] All annotation files are unreadable.", vim.log.levels.WARN)
+            vim.notify("MeowReview: All annotation files are unreadable.", vim.log.levels.WARN)
             return
         end
         visited[ann.id] = true

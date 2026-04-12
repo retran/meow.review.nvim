@@ -222,12 +222,12 @@ local function write_to_file(markdown, root, filename)
     local path = root .. "/" .. filename
     local f = io.open(path, "w")
     if not f then
-        vim.notify("[meow-review] Cannot write " .. path, vim.log.levels.ERROR)
+        vim.notify("MeowReview: Cannot write " .. path, vim.log.levels.ERROR)
         return
     end
     f:write(markdown)
     f:close()
-    vim.notify("[meow-review] Exported \u{2192} " .. filename, vim.log.levels.INFO)
+    vim.notify("MeowReview: Exported \u{2192} " .. filename, vim.log.levels.INFO)
 end
 
 --- Built-in: write to the configured `export_filename` in the project root.
@@ -247,7 +247,7 @@ local function export_to_file_prompt(markdown, root)
     local default = ok and cfg.get().export_filename or ".meow-review.md"
     vim.ui.input({ prompt = "Export filename: ", default = default }, function(input)
         if not input or input == "" then
-            vim.notify("[meow-review] Export cancelled.", vim.log.levels.INFO)
+            vim.notify("MeowReview: Export cancelled.", vim.log.levels.INFO)
             return
         end
         write_to_file(markdown, root, input)
@@ -259,7 +259,7 @@ end
 ---@param _root string
 local function export_to_clipboard(markdown, _root)
     vim.fn.setreg("+", markdown)
-    vim.notify("[meow-review] Exported \u{2192} clipboard", vim.log.levels.INFO)
+    vim.notify("MeowReview: Exported \u{2192} clipboard", vim.log.levels.INFO)
 end
 
 -- ── Dispatch ──────────────────────────────────────────────────────────────────
@@ -276,7 +276,7 @@ function M.export(name)
 
     local fn = exporters[name]
     if not fn then
-        vim.notify("[meow-review] No exporter registered: " .. name, vim.log.levels.WARN)
+        vim.notify("MeowReview: No exporter registered: " .. name, vim.log.levels.WARN)
         return
     end
 
@@ -284,7 +284,7 @@ function M.export(name)
     local sorted = store.sorted()
 
     if #sorted == 0 then
-        vim.notify("[meow-review] No annotations to export.", vim.log.levels.INFO)
+        vim.notify("MeowReview: No annotations.", vim.log.levels.INFO)
         return
     end
 
@@ -293,7 +293,7 @@ function M.export(name)
 
     local ok, err = pcall(fn, markdown, root)
     if not ok then
-        vim.notify("[meow-review] Exporter '" .. name .. "' failed: " .. tostring(err), vim.log.levels.ERROR)
+        vim.notify("MeowReview: Exporter '" .. name .. "' failed: " .. tostring(err), vim.log.levels.ERROR)
     end
 end
 

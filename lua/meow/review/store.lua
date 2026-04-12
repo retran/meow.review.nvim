@@ -153,13 +153,13 @@ function M.save()
 
     local ok, json = pcall(vim.json.encode, data)
     if not ok then
-        vim.notify("[meow-review] Failed to encode annotations: " .. tostring(json), vim.log.levels.ERROR)
+        vim.notify("MeowReview: Failed to encode annotations: " .. tostring(json), vim.log.levels.ERROR)
         return
     end
 
     local f = io.open(path, "w")
     if not f then
-        vim.notify("[meow-review] Cannot write " .. path, vim.log.levels.ERROR)
+        vim.notify("MeowReview: Cannot write " .. path, vim.log.levels.ERROR)
         return
     end
     f:write(json)
@@ -184,13 +184,13 @@ function M.load(root)
 
     local ok, data = pcall(vim.json.decode, raw)
     if not ok or type(data) ~= "table" then
-        vim.notify("[meow-review] Cannot parse " .. path, vim.log.levels.WARN)
+        vim.notify("MeowReview: Cannot parse " .. path, vim.log.levels.WARN)
         state.annotations = {}
         return
     end
 
     if data.version ~= VERSION then
-        vim.notify("[meow-review] Unsupported version in " .. path, vim.log.levels.WARN)
+        vim.notify("MeowReview: Unsupported version in " .. path, vim.log.levels.WARN)
         state.annotations = {}
         return
     end
