@@ -119,6 +119,8 @@ function M.open_add_modal(opts)
     local function dismiss()
         if not dismissed then
             dismissed = true
+            -- Ensure we return to normal mode in the underlying editor
+            vim.cmd("stopinsert")
             popup:unmount()
         end
     end
@@ -212,6 +214,8 @@ function M.open_edit_modal(annotation, on_confirm)
     local function dismiss()
         if not dismissed then
             dismissed = true
+            -- Ensure we return to normal mode in the underlying editor
+            vim.cmd("stopinsert")
             popup:unmount()
         end
     end
