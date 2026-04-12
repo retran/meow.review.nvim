@@ -89,10 +89,10 @@ local subcommand_tbl = {
             require("meow.review").clear_all()
         end,
     },
-    summary = {
+    goto = {
         impl = function(_, _)
             if not check_dependencies() then return end
-            require("meow.review").summary()
+            require("meow.review").goto_comment()
         end,
     },
     reload = {
@@ -120,7 +120,7 @@ local function meow_review_cmd(opts)
 
     if not subcommand_key or subcommand_key == "" then
         vim.notify(
-            "Usage: :MeowReview <add|delete|view|export [name]|clear|summary|reload|next|prev>",
+            "Usage: :MeowReview <add|delete|view|export [name]|clear|goto|reload|next|prev>",
             vim.log.levels.ERROR
         )
         return
@@ -141,7 +141,7 @@ end
 vim.api.nvim_create_user_command("MeowReview", meow_review_cmd, {
     nargs = "*",
     range = true,
-    desc = "Code review annotation tool (Usage: MeowReview <add|delete|view|export [name]|clear|summary|reload|next|prev>)",
+    desc = "Code review annotation tool (Usage: MeowReview <add|delete|view|export [name]|clear|goto|reload|next|prev>)",
     complete = function(arg_lead, cmdline, _)
         -- First arg: complete subcommand names
         if cmdline:match("^['<,'>]*MeowReview[!]*%s+%w*$") then
@@ -190,10 +190,10 @@ vim.keymap.set("n", "<Plug>(MeowReviewClear)", function()
     require("meow.review").clear_all()
 end, { desc = "Clear all review comments" })
 
-vim.keymap.set("n", "<Plug>(MeowReviewSummary)", function()
+vim.keymap.set("n", "<Plug>(MeowReviewGoto)", function()
     if not check_dependencies() then return end
-    require("meow.review").summary()
-end, { desc = "Show review summary picker" })
+    require("meow.review").goto_comment()
+end, { desc = "Go to review comment" })
 
 vim.keymap.set("n", "<Plug>(MeowReviewReload)", function()
     require("meow.review").reload()

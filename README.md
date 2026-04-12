@@ -79,7 +79,7 @@ Install `meow.review.nvim` using your favorite plugin manager.
         { "<leader>rv", "<Plug>(MeowReviewView)",    desc = "View Review Comment" },
         { "<leader>re", "<Plug>(MeowReviewExport)",  desc = "Export Review" },
         { "<leader>rc", "<Plug>(MeowReviewClear)",   desc = "Clear All Comments" },
-        { "<leader>rS", "<Plug>(MeowReviewSummary)", desc = "Review Summary" },
+        { "<leader>rg", "<Plug>(MeowReviewGoto)",   desc = "Go to Review Comment" },
         { "<leader>rr", "<Plug>(MeowReviewReload)",  desc = "Reload Review" },
         { "]r",         "<Plug>(MeowReviewNext)",    desc = "Next Review Comment" },
         { "[r",         "<Plug>(MeowReviewPrev)",    desc = "Previous Review Comment" },
@@ -122,7 +122,7 @@ The plugin provides the `:MeowReview` command to manage annotations.
 - **Export all annotations:** `:MeowReview export`
 - **Export to a specific target:** `:MeowReview export file`
 - **Jump to next annotation:** `:MeowReview next`
-- **View annotation summary:** `:MeowReview summary`
+- **View annotation summary:** `:MeowReview goto`
 
 ---
 
@@ -242,7 +242,7 @@ The plugin ships with `<Plug>` mappings only — no default keymaps are set auto
 | `(MeowReviewView)` | `<leader>rv` | `n` | View annotation popup at cursor |
 | `(MeowReviewExport)` | `<leader>re` | `n` | Export all annotations to Markdown |
 | `(MeowReviewClear)` | `<leader>rc` | `n` | Clear all annotations (with confirmation) |
-| `(MeowReviewSummary)` | `<leader>rS` | `n` | Open summary picker |
+| `(MeowReviewGoto)` | `<leader>rg` | `n` | Open picker — jump to any annotation |
 | `(MeowReviewReload)` | `<leader>rr` | `n` | Reload from `.meow-review.json` |
 | `(MeowReviewNext)` | `]r` | `n` | Jump to next annotation |
 | `(MeowReviewPrev)` | `[r` | `n` | Jump to previous annotation |
@@ -260,7 +260,7 @@ The plugin ships with `<Plug>` mappings only — no default keymaps are set auto
 | `:MeowReview export clipboard` | Copy to system clipboard |
 | `:MeowReview export <name>` | Run a custom exporter by name |
 | `:MeowReview clear` | Clear all annotations |
-| `:MeowReview summary` | Open summary picker |
+| `:MeowReview goto` | Open picker — jump to any annotation |
 | `:MeowReview reload` | Reload from JSON |
 | `:MeowReview next` | Next annotation |
 | `:MeowReview prev` | Previous annotation |

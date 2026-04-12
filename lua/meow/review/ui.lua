@@ -21,7 +21,7 @@
 -- THE SOFTWARE.
 --
 -- @file: lua/meow/review/ui.lua
--- @brief: nui.nvim modal (add), popup (view), and menu picker (summary/disambiguation).
+-- @brief: nui.nvim multiline modal (add), popup (view), and menu picker (disambiguation).
 -- @author: Andrew Vasilyev
 -- @license: MIT
 
@@ -34,21 +34,19 @@ local function get_types()
     return require("meow.review.types")
 end
 
---- Render the type-selector line shown in the bottom border of the add modal.
---- Current type is highlighted with "▸ "; others are shown lower-case.
+--- Render the type label shown in the bottom border of the add modal.
+--- Shows only the current type: its icon and name.
 ---@param current_type string
 ---@return string
 local function render_type_line(current_type)
     local types = get_types()
-    local parts = {}
-    for _, name in ipairs(types.order) do
-        if name == current_type then
-            table.insert(parts, "▸ " .. name)
-        else
-            table.insert(parts, name:lower())
-        end
+    local t = types.get(current_type)
+    local icon = t and t.icon or ""
+    local label = t and (t.label or current_type) or current_type
+    if icon ~= "" then
+        return " " .. icon .. "  " .. label .. " "
     end
-    return " " .. table.concat(parts, "   ") .. " "
+    return " " .. label .. " "
 end
 
 --- Build the location label for the top border of the add modal.
@@ -69,26 +67,32 @@ end
 
 -- ── Add modal ─────────────────────────────────────────────────────────────────
 
---- Open the add-comment modal.
+--- Open the add-comment modal (multiline editor).
+--- <Tab>      — cycle annotation type
+--- <C-CR>/<M-CR> — confirm and save
+--- <Esc>/<C-c>   — cancel
 ---@param opts table `{ lnum, end_lnum, hunk, context_symbol, file, on_confirm }`
---- `on_confirm(type_name: string, text: string)` is called on `<Enter>`.
+--- `on_confirm(type_name: string, text: string)` is called on confirm.
 function M.open_add_modal(opts)
-    local Input = require("nui.input")
+    local Popup = require("nui.popup")
     local event = require("nui.utils.autocmd").event
 
     local types = get_types()
     local current_type = types.order[1]
 
     local location_str = render_location(opts)
-    local context_str = opts.context_symbol and (" ctx: " .. opts.context_symbol .. " ") or nil
+    local context_str = opts.context_symbol and (" ctx: " .. opts.context_symbol) or ""
+    local top_label = " Add Review Comment — " .. location_str:gsub("^ ", ""):gsub(" $", "") .. context_str .. " "
 
-    local input = Input({
+    local popup = Popup({
         position = "50%",
-        size = { width = 60 },
+        size = { width = 64, height = 6 },
+        enter = true,
+        focusable = true,
         border = {
             style = "rounded",
             text = {
-                top = " Add Review Comment ",
+                top = top_label,
                 top_align = "center",
                 bottom = render_type_line(current_type),
                 bottom_align = "left",
@@ -96,36 +100,55 @@ function M.open_add_modal(opts)
         },
         win_options = {
             winhighlight = "Normal:Normal,FloatBorder:FloatBorder",
+            wrap = true,
         },
-    }, {
-        prompt = location_str .. (context_str or "") .. " > ",
-        default_value = "",
-        on_submit = function(value)
-            local text = vim.trim(value)
-            if text ~= "" and opts.on_confirm then
-                opts.on_confirm(current_type, text)
-            end
-        end,
+        buf_options = {
+            modifiable = true,
+            filetype = "markdown",
+        },
     })
 
-    input:mount()
+    popup:mount()
 
-    -- Guard against double-unmount: on_submit fires BufLeave which would crash nui
+    -- Start in insert mode
+    vim.cmd("startinsert")
+
     local dismissed = false
     local function dismiss()
         if not dismissed then
             dismissed = true
-            input:unmount()
+            popup:unmount()
         end
     end
 
-    -- <Tab>: cycle type and update bottom border text
-    input:map("i", "<Tab>", function()
+    local function confirm()
+        local lines = vim.api.nvim_buf_get_lines(popup.bufnr, 0, -1, false)
+        local text = vim.trim(table.concat(lines, "\n"))
+        dismiss()
+        if text ~= "" and opts.on_confirm then
+            opts.on_confirm(current_type, text)
+        end
+    end
+
+    -- <C-CR> / <M-CR>: confirm from insert mode
+    popup:map("i", "<C-CR>", confirm, { noremap = true })
+    popup:map("i", "<M-CR>", confirm, { noremap = true })
+    -- Also allow confirming from normal mode
+    popup:map("n", "<CR>", confirm, { noremap = true })
+
+    -- <Tab> in insert mode: cycle type and update bottom border
+    popup:map("i", "<Tab>", function()
         current_type = types.next(current_type)
-        input.border:set_text("bottom", render_type_line(current_type))
+        popup.border:set_text("bottom", render_type_line(current_type))
     end, { noremap = true })
 
-    input:on(event.BufLeave, function()
+    -- <Esc> / <C-c>: cancel
+    popup:map("i", "<Esc>", dismiss, { noremap = true })
+    popup:map("i", "<C-c>", dismiss, { noremap = true })
+    popup:map("n", "<Esc>", dismiss, { noremap = true })
+    popup:map("n", "q", dismiss, { noremap = true })
+
+    popup:on(event.BufLeave, function()
         vim.schedule(dismiss)
     end)
 end

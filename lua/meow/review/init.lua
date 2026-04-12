@@ -308,16 +308,16 @@ function M.clear_all()
     end
 end
 
--- ── Summary picker ────────────────────────────────────────────────────────────
+-- ── Go to comment picker ──────────────────────────────────────────────────────
 
 --- Open a picker listing all annotations; selecting one jumps to its location.
-function M.summary()
+function M.goto_comment()
     local all = store().sorted()
     if #all == 0 then
         vim.notify("[meow-review] No annotations.", vim.log.levels.INFO)
         return
     end
-    ui().open_picker(all, "Review Summary", function(ann)
+    ui().open_picker(all, "Go to Comment", function(ann)
         M._jump_to(ann)
     end)
 end

@@ -34,6 +34,7 @@ M.NS = vim.api.nvim_create_namespace("meow_review")
 local SIGN_GROUP = "meow_review"
 
 --- Register sign definitions. Called once from init.lua setup().
+--- Also ensures highlight links are established for newly defined types.
 function M.setup_signs()
     require("meow.review.types").setup_highlights()
 end
@@ -47,6 +48,14 @@ function M.place(annotation, bufnr)
     local t = types.get(annotation.type)
     if not t then
         return
+    end
+
+    -- Ensure sign column is visible in every window showing this buffer
+    for _, win in ipairs(vim.fn.win_findbuf(bufnr)) do
+        local sc = vim.wo[win].signcolumn
+        if sc == "no" or sc == "" then
+            vim.wo[win].signcolumn = "yes"
+        end
     end
 
     -- Sign column icon (below diagnostics priority = 10, above default = 0)

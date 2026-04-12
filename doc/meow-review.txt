@@ -22,8 +22,7 @@ CONTENTS					*meow-review-contents*
    - Quick Start			|meow-review-quick-start|
 5. Configuration			|meow-review-configuration|
 6. Annotation Types			|meow-review-annotation-types|
-7. Mappings				|meow-review-mappings|
-   - In-Window Mappings			|meow-review-in-window-mappings|
+7. Mappings				|meow-review-mappings|   - In-Window Mappings			|meow-review-in-window-mappings|
 8. Commands				|meow-review-commands|
 9. Add Modal				|meow-review-add-modal|
 10. Export System			|meow-review-export|
@@ -246,7 +245,7 @@ Example Lua Keymaps:
 	vim.keymap.set("n", "<leader>rv", "<Plug>(MeowReviewView)",    { desc = "View Review Comment" })
 	vim.keymap.set("n", "<leader>re", "<Plug>(MeowReviewExport)",  { desc = "Export Review" })
 	vim.keymap.set("n", "<leader>rc", "<Plug>(MeowReviewClear)",   { desc = "Clear All Comments" })
-	vim.keymap.set("n", "<leader>rS", "<Plug>(MeowReviewSummary)", { desc = "Review Summary" })
+	vim.keymap.set("n", "<leader>rg", "<Plug>(MeowReviewGoto)",    { desc = "Go to Review Comment" })
 	vim.keymap.set("n", "<leader>rr", "<Plug>(MeowReviewReload)",  { desc = "Reload Review" })
 	vim.keymap.set("n", "]r",         "<Plug>(MeowReviewNext)",    { desc = "Next Review Comment" })
 	vim.keymap.set("n", "[r",         "<Plug>(MeowReviewPrev)",    { desc = "Previous Review Comment" })
@@ -276,7 +275,7 @@ COMMANDS					*meow-review-commands*
 	- `view`          — view annotation popup at cursor
 	- `export [name]` — run the default exporter, or a single named one
 	- `clear`         — clear all annotations (with confirmation)
-	- `summary`       — open annotation summary picker
+	- `goto`          — open picker; selecting an annotation jumps to it
 	- `reload`        — reload from `.meow-review.json`
 	- `next`          — jump to next annotation
 	- `prev`          — jump to previous annotation
@@ -449,9 +448,10 @@ review.unregister_exporter({name})
 review.clear_all()
 	Prompt to clear all annotations.
 
-						*meow.review.summary()*
-review.summary()
-	Open a summary picker listing all annotations.
+						*meow.review.goto_comment()*
+review.goto_comment()
+	Open a picker listing all annotations. Selecting one jumps to its
+	location, opening the file if needed.
 
 						*meow.review.reload()*
 review.reload()
