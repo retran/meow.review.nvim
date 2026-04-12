@@ -1,0 +1,52 @@
+-- MIT License
+--
+-- Copyright (c) 2025 Andrew Vasilyev <me@retran.me>
+--
+-- Permission is hereby granted, free of charge, to any person obtaining a copy
+-- of this software and associated documentation files (the "Software"), to deal
+-- in the Software without restriction, including without limitation the rights
+-- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+-- copies of the Software, and to permit persons to whom the Software is
+-- furnished to do so, subject to the following conditions:
+--
+-- The above copyright notice and this permission notice shall be included in
+-- all copies or substantial portions of the Software.
+--
+-- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+-- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+-- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+-- AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+-- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+-- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+-- THE SOFTWARE.
+--
+-- @file: lua/meow/review/config/meta.lua
+-- @brief: LuaLS type annotations for meow.review.nvim configuration
+-- @author: Andrew Vasilyev
+-- @license: MIT
+
+---@class meow.review.Annotation
+---@field id string Unique annotation ID ("timestamp_random").
+---@field file string Relative file path from the project root.
+---@field lnum number 1-based start line number.
+---@field end_lnum number 1-based end line number.
+---@field type "ISSUE"|"SUGGESTION"|"NOTE" Annotation type.
+---@field text string Review comment text.
+---@field context string|nil Treesitter symbol name at annotation time, or nil.
+---@field snippet string|nil Source lines captured around the range (with line numbers), or nil.
+---@field snippet_start number|nil First line number in the snippet (1-based), or nil.
+---@field hunk_head string|nil Unified-diff hunk header (e.g. "@@ -1,4 +1,4 @@"), or nil.
+---@field hunk_start number|nil Hunk start line in the new file, or nil.
+---@field hunk_end number|nil Hunk end line in the new file, or nil.
+---@field timestamp number Unix timestamp when the annotation was created.
+
+---@alias meow.review.ExporterFn fun(markdown: string, root: string)
+
+---@class meow.review.Config
+---@field context_lines? number Lines of source context to capture before and after the annotated range (default 3). Set to 0 to disable snippet capture.
+---@field disabled_exporters? string[] Built-in exporter names to disable (e.g. {"clipboard"} to disable the clipboard exporter).
+---@field default_exporter? string Exporter to run when no name is given to `:MeowReview export` (default "clipboard").
+---@field prompt_preamble? string Text inserted after the document heading in the exported Markdown. Defaults to an instruction that asks the AI agent to apply each annotation as a targeted fix. Set to "" to omit it.
+
+---@type meow.review.Config | fun(): meow.review.Config | nil
+vim.g.meow_review = vim.g.meow_review

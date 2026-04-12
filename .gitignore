@@ -1,0 +1,33 @@
+# Lua LSP / tooling overrides (machine-local)
+.luarc.json.bak
+.stylua.toml.bak
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+
+# Test artifacts
+test-results/
+coverage/
+
+# Temp
+*.tmp
+*.bak
+
+# LuaRocks artifacts
+*.rock
+*.rockspec.bak
+
+# Review data files (user-generated, not repo content)
+.meow-review.json
+.meow-review.md
