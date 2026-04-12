@@ -31,7 +31,7 @@ Part of the [project meow](https://github.com/retran/meow) plugin family.
 - **Contextual capture** — Treesitter symbol name (function/class) attached to each annotation
 - **Hunk detection** — automatically associates annotations with git hunks (gitsigns) or vimdiff hunks
 - **JSON persistence** — `.meow-review.json` at the project root; survives Neovim restarts
-- **Pluggable export** — register custom exporters; built-in `file` and `clipboard` targets included
+- **Pluggable export** — register custom exporters; built-in `file`, `file_prompt`, and `clipboard` targets included
 - **Navigation** — jump forward/backward between annotations across files
 - **Sign column** — per-type signs track position drift as buffers are edited (extmarks)
 - **`:checkhealth`** — `meow.review` health check reports dependency status, config, and exporters
@@ -150,7 +150,8 @@ require("meow.review").setup({
         .. "then apply the requested fix directly to the file. "
         .. "Prefer minimal, targeted edits. Do not refactor unrelated code.",
 
-    -- Custom annotation types. Replaces or extends the built-in ISSUE / SUGGESTION / NOTE set.
+    -- Custom annotation types. Replaces the built-in ISSUE / SUGGESTION / NOTE set.
+    -- To keep a built-in type, include it explicitly in this table.
     -- Keys become the type names used in annotations and exported Markdown headings.
     annotation_types = nil,   -- default: { ISSUE = …, SUGGESTION = …, NOTE = … }
 
@@ -176,7 +177,7 @@ vim.g.meow_review = {
 
 ### Annotation Types
 
-Three annotation types are built in. All are fully customizable via `annotation_types` and `annotation_type_order`.
+Three annotation types are built in. All are customizable via `annotation_types` and `annotation_type_order`. Providing `annotation_types` replaces the entire set — to keep a built-in type, include it explicitly.
 
 #### Keep the defaults
 

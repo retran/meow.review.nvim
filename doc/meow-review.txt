@@ -53,8 +53,8 @@ KEY FEATURES					*meow-review-features*
   (gitsigns) or vimdiff hunks.
 - *JSON persistence*: `.meow-review.json` at the project root; survives
   Neovim restarts.
-- *Pluggable export*: Register custom exporters; built-in `file` and
-  `clipboard` targets included.
+- *Pluggable export*: Register custom exporters; built-in `file`, `file_prompt`,
+  and `clipboard` targets included.
 - *Navigation*: Jump forward/backward between annotations across files.
 - *Sign column*: Per-type signs track position drift as buffers are edited
   (extmarks).
@@ -182,8 +182,9 @@ Configuration can also be set via the global variable before the plugin loads:
 ==============================================================================
 ANNOTATION TYPES				*meow-review-annotation-types*
 
-Three annotation types are built in. All are fully customizable via
-`annotation_types` and `annotation_type_order`.
+Three annotation types are built in. Customizable via `annotation_types` and
+`annotation_type_order`. Providing `annotation_types` replaces the entire set —
+to keep a built-in type, include it explicitly.
 
 Built-in types ~
 
@@ -198,7 +199,8 @@ Built-in types ~
 
 Custom types ~
 
-Override or extend the built-in set via `annotation_types`:
+Replace the built-in set via `annotation_types` (include defaults explicitly to
+keep them):
 >
 	require("meow.review").setup({
 	    annotation_types = {
