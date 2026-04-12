@@ -302,6 +302,8 @@ function M.open_view_popup(annotation)
     local popup = Popup({
         position = "50%",
         size = { width = width, height = height },
+        enter = true,
+        focusable = true,
         border = {
             style = "rounded",
             text = {
