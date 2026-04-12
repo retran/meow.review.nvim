@@ -214,11 +214,12 @@ end
 
 -- ── Built-in exporters ────────────────────────────────────────────────────────
 
---- Built-in: write `.meow-review.md` in the project root.
+--- Write markdown to {root}/{filename}, notifying on success or failure.
 ---@param markdown string
 ---@param root string
-local function export_to_file(markdown, root)
-    local path = root .. "/.meow-review.md"
+---@param filename string
+local function write_to_file(markdown, root, filename)
+    local path = root .. "/" .. filename
     local f = io.open(path, "w")
     if not f then
         vim.notify("[meow-review] Cannot write " .. path, vim.log.levels.ERROR)
@@ -226,7 +227,31 @@ local function export_to_file(markdown, root)
     end
     f:write(markdown)
     f:close()
-    vim.notify("[meow-review] Exported \u{2192} .meow-review.md", vim.log.levels.INFO)
+    vim.notify("[meow-review] Exported \u{2192} " .. filename, vim.log.levels.INFO)
+end
+
+--- Built-in: write to the configured `export_filename` in the project root.
+---@param markdown string
+---@param root string
+local function export_to_file(markdown, root)
+    local ok, cfg = pcall(require, "meow.review.config.internal")
+    local filename = ok and cfg.get().export_filename or ".meow-review.md"
+    write_to_file(markdown, root, filename)
+end
+
+--- Built-in: prompt for a filename then write to the project root.
+---@param markdown string
+---@param root string
+local function export_to_file_prompt(markdown, root)
+    local ok, cfg = pcall(require, "meow.review.config.internal")
+    local default = ok and cfg.get().export_filename or ".meow-review.md"
+    vim.ui.input({ prompt = "Export filename: ", default = default }, function(input)
+        if not input or input == "" then
+            vim.notify("[meow-review] Export cancelled.", vim.log.levels.INFO)
+            return
+        end
+        write_to_file(markdown, root, input)
+    end)
 end
 
 --- Built-in: copy the Markdown to the system clipboard (+ register).
@@ -284,6 +309,9 @@ function M.setup_builtins(cfg)
 
     if not disabled_set["file"] then
         M.register("file", export_to_file)
+    end
+    if not disabled_set["file_prompt"] then
+        M.register("file_prompt", export_to_file_prompt)
     end
     if not disabled_set["clipboard"] then
         M.register("clipboard", export_to_clipboard)

@@ -46,6 +46,7 @@
 ---@field context_lines? number Lines of source context to capture before and after the annotated range (default 3). Set to 0 to disable snippet capture.
 ---@field disabled_exporters? string[] Built-in exporter names to disable (e.g. {"clipboard"} to disable the clipboard exporter).
 ---@field default_exporter? string Exporter to run when no name is given to `:MeowReview export` (default "clipboard").
+---@field export_filename? string Filename written by the `file` and `file_prompt` exporters (default ".meow-review.md").
 ---@field prompt_preamble? string Text inserted after the document heading in the exported Markdown. Defaults to an instruction that asks the AI agent to apply each annotation as a targeted fix. Set to "" to omit it.
 
 ---@type meow.review.Config | fun(): meow.review.Config | nil

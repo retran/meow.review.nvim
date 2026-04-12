@@ -138,8 +138,14 @@ require("meow.review").setup({
     -- Set to 0 to disable snippet capture.
     context_lines = 3,
 
-    -- Built-in exporters to disable. Available: "file", "clipboard".
+    -- Built-in exporters to disable. Available: "file", "file_prompt", "clipboard".
     disabled_exporters = {},
+
+    -- Default exporter used by :MeowReview export (no name given).
+    default_exporter = "clipboard",
+
+    -- Filename written by the `file` and `file_prompt` exporters.
+    export_filename = ".meow-review.md",
 
     -- Text inserted after the document heading in the exported Markdown.
     -- The default instructs the AI agent to apply each annotation as a
@@ -157,6 +163,8 @@ require("meow.review").setup({
 vim.g.meow_review = {
     context_lines = 5,
     disabled_exporters = { "clipboard" },
+    default_exporter = "file",
+    export_filename = ".review.md",
     prompt_preamble = "Fix the issues below. Keep changes minimal.",
 }
 ```
@@ -184,9 +192,10 @@ The plugin ships with `<Plug>` mappings only — no default keymaps are set auto
 | `:MeowReview add` | Add annotation at cursor |
 | `:MeowReview delete` | Delete annotation at cursor |
 | `:MeowReview view` | View annotation popup |
-| `:MeowReview export` | Run all exporters |
-| `:MeowReview export file` | Run only the `file` exporter |
-| `:MeowReview export clipboard` | Run only the `clipboard` exporter |
+| `:MeowReview export` | Run the default exporter (`clipboard` unless configured) |
+| `:MeowReview export file` | Write to `export_filename` in the project root |
+| `:MeowReview export file_prompt` | Prompt for filename, then write |
+| `:MeowReview export clipboard` | Copy to system clipboard |
 | `:MeowReview export <name>` | Run a custom exporter by name |
 | `:MeowReview clear` | Clear all annotations |
 | `:MeowReview summary` | Open summary picker |
@@ -210,17 +219,25 @@ When adding a comment, a modal opens with:
 
 ## Export System
 
-The export system is **pluggable**. Two built-in exporters are registered by `setup()`:
+The export system is **pluggable**. Three built-in exporters are registered by `setup()`:
 
 | Name | Behaviour |
 | ---- | --------- |
-| `file` | Writes `.meow-review.md` to the project root |
-| `clipboard` | Copies Markdown to the system clipboard (`+` register) |
+| `clipboard` | Copies Markdown to the system clipboard (`+` register) — **default** |
+| `file` | Writes to the configured `export_filename` in the project root |
+| `file_prompt` | Prompts for a filename (pre-filled with `export_filename`), then writes |
 
-Run all exporters with `:MeowReview export`, or target one:
+`:MeowReview export` runs the configured `default_exporter` (`clipboard` unless overridden):
+
+```vim
+:MeowReview export
+```
+
+Target a specific exporter by name:
 
 ```vim
 :MeowReview export file
+:MeowReview export file_prompt
 :MeowReview export clipboard
 ```
 

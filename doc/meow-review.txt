@@ -152,17 +152,20 @@ function. Here are the defaults:
 	    -- Set to 0 to disable snippet capture entirely.
 	    context_lines = 3,
 
-	    -- Built-in exporters to disable. Available: "file", "clipboard".
+	    -- Built-in exporters to disable. Available: "file", "file_prompt", "clipboard".
 	    disabled_exporters = {},
+
+	    -- Default exporter used by :MeowReview export (no name given).
+	    default_exporter = "clipboard",
+
+	    -- Filename written by the `file` and `file_prompt` exporters.
+	    export_filename = ".meow-review.md",
 
 	    -- Text inserted after the document heading in the exported Markdown.
 	    -- The default instructs the AI agent to apply each annotation as a
 	    -- targeted, minimal fix without touching unrelated code.
 	    -- Set to "" to omit the preamble entirely.
-	    prompt_preamble = "The following annotations were left during a code review. "
-	        .. "For each annotation, read the code snippet and comment carefully, "
-	        .. "then apply the requested fix directly to the file. "
-	        .. "Prefer minimal, targeted edits. Do not refactor unrelated code.",
+	    prompt_preamble = "...",  -- default: see below
 	})
 <
 
@@ -171,6 +174,8 @@ Configuration can also be set via the global variable before the plugin loads:
 	vim.g.meow_review = {
 	    context_lines = 5,
 	    disabled_exporters = { "clipboard" },
+	    default_exporter = "file",
+	    export_filename = ".review.md",
 	    prompt_preamble = "Fix the issues below. Keep changes minimal.",
 	}
 <
@@ -229,7 +234,7 @@ COMMANDS					*meow-review-commands*
 	- `add`           — add annotation at cursor / visual selection
 	- `delete`        — delete annotation at cursor
 	- `view`          — view annotation popup at cursor
-	- `export [name]` — run all exporters, or a single named one
+	- `export [name]` — run the default exporter, or a single named one
 	- `clear`         — clear all annotations (with confirmation)
 	- `summary`       — open annotation summary picker
 	- `reload`        — reload from `.meow-review.json`
@@ -253,17 +258,21 @@ is displayed in the modal prompt prefix.
 ==============================================================================
 EXPORT SYSTEM					*meow-review-export*
 
-The export system is pluggable. Two built-in exporters are registered by
+The export system is pluggable. Three built-in exporters are registered by
 `setup()` unless disabled:
 
-*file*		Writes `.meow-review.md` to the project root.
 *clipboard*	Copies the Markdown to the system clipboard (`+` register).
+		This is the default exporter.
+*file*		Writes to the configured `export_filename` in the project root.
+*file_prompt*	Prompts for a filename (pre-filled with `export_filename`),
+		then writes to the project root.
 
-Run all exporters: >
+Run the default exporter (`clipboard` unless overridden via `default_exporter`): >
 	:MeowReview export
 <
 Run a specific exporter by name: >
 	:MeowReview export file
+	:MeowReview export file_prompt
 	:MeowReview export clipboard
 <
 
@@ -356,6 +365,10 @@ review.setup({opts})
 	                                 (default: 3)
 	  `disabled_exporters`   string[]  Built-in exporter names to skip
 	                                 (default: {})
+	  `default_exporter`     string    Exporter used by bare `:MeowReview export`
+	                                 (default: "clipboard")
+	  `export_filename`      string    Filename for `file` / `file_prompt` exporters
+	                                 (default: ".meow-review.md")
 	  `prompt_preamble`      string    Preamble text in exported Markdown
 	                                 (see |meow-review-configuration|)
 
