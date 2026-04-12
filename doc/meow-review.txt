@@ -1,15 +1,14 @@
-*meow-review.txt*	For Neovim >= 0.8.0	Last change: 2026 April 12
+*meow-review.txt*	For Neovim >= 0.11.0	Last change: 2026 April 12
 
 MEOW.REVIEW.NVIM					*meow.review* *meow-review*
 
 A purr-fectly structured way to annotate and review code in Neovim.
 
-Ever find yourself leaving scattered notes for your AI coding agent, only to
-lose track of what needs fixing where? `meow.review.nvim` is here to help. It
-lets you annotate AI-generated code with structured, typed review comments
-directly in Neovim — then export them as clean Markdown so your AI agent knows
-exactly what to fix and where. `meow.review.nvim` turns your review notes into
-precise, actionable instructions for AI-assisted development.
+`meow.review.nvim` annotates AI-generated code with structured, typed review
+comments directly in Neovim and exports them as Markdown so your AI agent
+knows exactly what to fix and where.
+
+Part of the project meow plugin family.
 
 ==============================================================================
 CONTENTS					*meow-review-contents*
@@ -22,9 +21,10 @@ CONTENTS					*meow-review-contents*
    - Quick Start			|meow-review-quick-start|
 5. Configuration			|meow-review-configuration|
 6. Annotation Types			|meow-review-annotation-types|
-7. Mappings				|meow-review-mappings|   - In-Window Mappings			|meow-review-in-window-mappings|
+7. Mappings				|meow-review-mappings|
+   - In-Window Mappings			|meow-review-in-window-mappings|
 8. Commands				|meow-review-commands|
-9. Add Modal				|meow-review-add-modal|
+9. Modals				|meow-review-modals|
 10. Export System			|meow-review-export|
 11. Custom Exporters			|meow-review-exporters|
 12. Lua API				|meow-review-api|
@@ -37,8 +37,8 @@ CONTENTS					*meow-review-contents*
 INTRODUCTION					*meow-review-introduction*
 
 `meow.review.nvim` is a Neovim plugin for annotating AI-generated code with
-structured review comments. Annotations are persisted as JSON and can be
-exported to Markdown for consumption by AI coding agents.
+structured review comments. Annotations are persisted as JSON and exported to
+Markdown for consumption by AI coding agents.
 
 Part of the meow.*.nvim plugin family.
 
@@ -65,7 +65,7 @@ KEY FEATURES					*meow-review-features*
 PREREQUISITES					*meow-review-prerequisites*
 
 Required:
-- Neovim: >= 0.8.0 (0.10+ recommended)
+- Neovim >= 0.11.0
 - Dependencies: `nui.nvim`
 
 Optional:
@@ -79,8 +79,6 @@ GETTING STARTED					*meow-review-getting-started*
 ------------------------------------------------------------------------------
 INSTALLATION					*meow-review-installation*
 
-Install `meow.review.nvim` using your favorite plugin manager.
-
 lazy.nvim:
 >
 	{
@@ -93,12 +91,13 @@ lazy.nvim:
 	        })
 	    end,
 	    keys = {
-	        { "<leader>ra", "<Plug>(MeowReviewAdd)",     mode = { "n", "v" } },
-	        { "<leader>rd", "<Plug>(MeowReviewDelete)",  mode = { "n", "v" } },
+	        { "<leader>ra", "<Plug>(MeowReviewAdd)",    mode = { "n", "v" } },
+	        { "<leader>rd", "<Plug>(MeowReviewDelete)", mode = { "n", "v" } },
+	        { "<leader>re", "<Plug>(MeowReviewEdit)" },
 	        { "<leader>rv", "<Plug>(MeowReviewView)" },
-	        { "<leader>re", "<Plug>(MeowReviewExport)" },
+	        { "<leader>rE", "<Plug>(MeowReviewExport)" },
 	        { "<leader>rc", "<Plug>(MeowReviewClear)" },
-	        { "<leader>rS", "<Plug>(MeowReviewSummary)" },
+	        { "<leader>rg", "<Plug>(MeowReviewGoto)" },
 	        { "<leader>rr", "<Plug>(MeowReviewReload)" },
 	        { "]r",         "<Plug>(MeowReviewNext)" },
 	        { "[r",         "<Plug>(MeowReviewPrev)" },
@@ -115,36 +114,30 @@ packer.nvim:
 	    end,
 	}
 <
-rocks.nvim:
+rocks.nvim (untested):
 >
 	:Rocks install meow.review.nvim
 <
-The dependency (`nui.nvim`) will be automatically installed and managed.
 Then add to your Neovim configuration:
 >
-	require("meow.review").setup({
-	    -- Your custom configuration goes here
-	})
+	require("meow.review").setup({})
 <
 
 ------------------------------------------------------------------------------
 QUICK START					*meow-review-quick-start*
 
-1. Install the plugin with your plugin manager (see |meow-review-installation|)
-2. Call setup (or let the plugin auto-configure with defaults)
-3. Open any file in a git repository
-4. Position cursor on a line you want to annotate
-5. Run `:MeowReview add` or press your mapped key
-6. In the modal, optionally press Tab to change type, type your comment,
-   press Enter
-7. The annotation appears in the sign column
-8. Run `:MeowReview export` to export all annotations to `.meow-review.md`
+1. Open any file in a git repository.
+2. Position the cursor on a line to annotate.
+3. Run `:MeowReview add` or press your mapped key.
+4. In the modal, press `<Tab>` to cycle the annotation type, type your
+   comment, press `<C-s>` to save.
+5. The annotation appears in the sign column.
+6. Run `:MeowReview export` to export all annotations to Markdown.
 
 ==============================================================================
 CONFIGURATION					*meow-review-configuration*
 
-You can customize the plugin by passing a configuration table to the `setup`
-function. Here are the defaults:
+Pass a configuration table to `setup()`. All keys are optional.
 >
 	require("meow.review").setup({
 	    -- Lines of source context captured above and below the annotated range.
@@ -161,20 +154,16 @@ function. Here are the defaults:
 	    export_filename = ".meow-review.md",
 
 	    -- Text inserted after the document heading in the exported Markdown.
-	    -- The default instructs the AI agent to apply each annotation as a
-	    -- targeted, minimal fix without touching unrelated code.
 	    -- Set to "" to omit the preamble entirely.
-	    prompt_preamble = "...",  -- default: see below
+	    prompt_preamble = "...",  -- default: see README
 
-	    -- Custom annotation types. When provided, replaces/extends the
-	    -- built-in ISSUE / SUGGESTION / NOTE set.  Keys become the type
-	    -- names used in annotations and in Markdown export headings.
-	    -- Omit to keep the built-in set unchanged.
+	    -- Custom annotation types. Replaces or extends the built-in
+	    -- ISSUE / SUGGESTION / NOTE set. Keys become the type names used
+	    -- in annotations and exported Markdown headings.
 	    annotation_types = nil,
 
 	    -- Tab-cycling order for the add-comment modal.
-	    -- Defaults to sorted keys when annotation_types is set, or to
-	    -- { "ISSUE", "SUGGESTION", "NOTE" } otherwise.
+	    -- Defaults to { "ISSUE", "SUGGESTION", "NOTE" } when annotation_types is nil.
 	    annotation_type_order = nil,
 	})
 <
@@ -193,8 +182,8 @@ Configuration can also be set via the global variable before the plugin loads:
 ==============================================================================
 ANNOTATION TYPES				*meow-review-annotation-types*
 
-Three annotation types are built in. All types are fully customizable via the
-`annotation_types` and `annotation_type_order` configuration keys.
+Three annotation types are built in. All are fully customizable via
+`annotation_types` and `annotation_type_order`.
 
 Built-in types ~
 
@@ -227,53 +216,57 @@ Each entry accepts:
   `icon`       string  Sign column character. Defaults to built-in icon or "".
   `hl`         string  Highlight group. Defaults to built-in hl or "Normal".
   `label`      string  Used in Markdown headings. Defaults to the key name.
-  `sign_name`  string  Internal Neovim sign name. Defaults to "MeowReview"..key.
+  `sign_name`  string  Reserved — unused since extmark rewrite (0.11+).
 
-When `annotation_types` is nil or empty, the three built-in types are used
-unchanged. When it is provided but does not include a built-in key (e.g.
-"ISSUE"), that key is dropped — only the supplied keys are active.
+When `annotation_types` is nil or empty, the three built-in types are active.
+When provided but missing a built-in key (e.g. "ISSUE"), that key is dropped —
+only the supplied keys are active.
 
 ==============================================================================
 MAPPINGS					*meow-review-mappings*
 
 The plugin registers `<Plug>` mappings only. No default keys are bound.
 
-Example Lua Keymaps:
+Example Lua keymaps:
 >
-	vim.keymap.set({ "n", "v" }, "<leader>ra", "<Plug>(MeowReviewAdd)",     { desc = "Add Review Comment" })
-	vim.keymap.set({ "n", "v" }, "<leader>rd", "<Plug>(MeowReviewDelete)",  { desc = "Delete Review Comment" })
-	vim.keymap.set("n", "<leader>rv", "<Plug>(MeowReviewView)",    { desc = "View Review Comment" })
-	vim.keymap.set("n", "<leader>re", "<Plug>(MeowReviewExport)",  { desc = "Export Review" })
-	vim.keymap.set("n", "<leader>rc", "<Plug>(MeowReviewClear)",   { desc = "Clear All Comments" })
-	vim.keymap.set("n", "<leader>rg", "<Plug>(MeowReviewGoto)",    { desc = "Go to Review Comment" })
-	vim.keymap.set("n", "<leader>rr", "<Plug>(MeowReviewReload)",  { desc = "Reload Review" })
-	vim.keymap.set("n", "]r",         "<Plug>(MeowReviewNext)",    { desc = "Next Review Comment" })
-	vim.keymap.set("n", "[r",         "<Plug>(MeowReviewPrev)",    { desc = "Previous Review Comment" })
+	vim.keymap.set({ "n", "v" }, "<leader>ra", "<Plug>(MeowReviewAdd)",
+	    { desc = "Add Review Comment" })
+	vim.keymap.set({ "n", "v" }, "<leader>rd", "<Plug>(MeowReviewDelete)",
+	    { desc = "Delete Review Comment" })
+	vim.keymap.set("n", "<leader>re", "<Plug>(MeowReviewEdit)",
+	    { desc = "Edit Review Comment" })
+	vim.keymap.set("n", "<leader>rv", "<Plug>(MeowReviewView)",
+	    { desc = "View Review Comment" })
+	vim.keymap.set("n", "<leader>rE", "<Plug>(MeowReviewExport)",
+	    { desc = "Export Review" })
+	vim.keymap.set("n", "<leader>rc", "<Plug>(MeowReviewClear)",
+	    { desc = "Clear All Comments" })
+	vim.keymap.set("n", "<leader>rg", "<Plug>(MeowReviewGoto)",
+	    { desc = "Go to Review Comment" })
+	vim.keymap.set("n", "<leader>rr", "<Plug>(MeowReviewReload)",
+	    { desc = "Reload Review" })
+	vim.keymap.set("n", "]r", "<Plug>(MeowReviewNext)",
+	    { desc = "Next Review Comment" })
+	vim.keymap.set("n", "[r", "<Plug>(MeowReviewPrev)",
+	    { desc = "Previous Review Comment" })
 <
 
 ------------------------------------------------------------------------------
 IN-WINDOW MAPPINGS				*meow-review-in-window-mappings*
 
-Inside the add modal, the following keys are available:
-
-|Key|		|Action|
-|<Tab>|		Cycle annotation type (ISSUE → SUGGESTION → NOTE → … by default).
-|<CR>|		Confirm and save the annotation.
-|<Esc>|		Cancel (no annotation added).
-|<C-c>|		Cancel.
+See |meow-review-modals| for keys available inside the add and edit modals.
 
 ==============================================================================
 COMMANDS					*meow-review-commands*
 
 :MeowReview {subcommand} [args]				*:MeowReview*
 
-	Opens annotation management.
-
 	{subcommand}:
 	- `add`           — add annotation at cursor / visual selection
 	- `delete`        — delete annotation at cursor
+	- `edit`          — edit annotation at cursor
 	- `view`          — view annotation popup at cursor
-	- `export [name]` — run the default exporter, or a single named one
+	- `export [name]` — run the default exporter, or a named one
 	- `clear`         — clear all annotations (with confirmation)
 	- `goto`          — open picker; selecting an annotation jumps to it
 	- `reload`        — reload from `.meow-review.json`
@@ -283,16 +276,27 @@ COMMANDS					*meow-review-commands*
 Tab completion is available for all subcommand names and exporter names.
 
 ==============================================================================
+MODALS						*meow-review-modals*
+
+------------------------------------------------------------------------------
 ADD MODAL					*meow-review-add-modal*
 
-When adding a comment, a nui.Input modal opens. The current annotation type
-is displayed in the modal prompt prefix.
+Run `:MeowReview add` or press your mapped key. A multiline popup opens;
+the current annotation type is shown in the bottom border.
 
-|Key|		|Action|
-|<Tab>|		Cycle annotation type (ISSUE → SUGGESTION → NOTE → … by default).
-|<CR>|		Confirm and save the annotation.
-|<Esc>|		Cancel (no annotation added).
-|<C-c>|		Cancel.
+Key		Mode		Action ~
+`<Tab>`		insert		Cycle annotation type
+`<C-s>`		insert, normal	Confirm and save
+`<CR>`		normal		Confirm and save
+`<Esc>`		insert		Switch to normal mode
+`<Esc>` / `q`	normal		Cancel
+`<C-c>`		insert		Cancel
+
+------------------------------------------------------------------------------
+EDIT MODAL					*meow-review-edit-modal*
+
+Run `:MeowReview edit` or press your mapped key. Opens pre-filled with the
+existing comment text and type. Same keys as the add modal.
 
 ==============================================================================
 EXPORT SYSTEM					*meow-review-export*
@@ -306,10 +310,12 @@ The export system is pluggable. Three built-in exporters are registered by
 *file_prompt*	Prompts for a filename (pre-filled with `export_filename`),
 		then writes to the project root.
 
-Run the default exporter (`clipboard` unless overridden via `default_exporter`): >
+Run the default exporter (`clipboard` unless overridden via `default_exporter`):
+>
 	:MeowReview export
 <
-Run a specific exporter by name: >
+Run a specific exporter by name:
+>
 	:MeowReview export file
 	:MeowReview export file_prompt
 	:MeowReview export clipboard
@@ -366,14 +372,17 @@ Unregister at runtime:
 
 Example: zellij + opencode integration ~
 
-The following exporter pastes the review into the active zellij pane so
-that opencode picks it up immediately.
+Pastes the review into the active zellij pane so opencode picks it up
+immediately.
 >
 	require("meow.review").register_exporter("zellij", function(markdown, _root)
-	    -- Write to a temp file to avoid shell-quoting issues
 	    local tmp = os.tmpname() .. ".md"
 	    local f = io.open(tmp, "w")
-	    if not f then return end
+	    if not f then
+	        vim.notify("MeowReview: zellij: could not write temp file",
+	            vim.log.levels.ERROR)
+	        return
+	    end
 	    f:write(markdown)
 	    f:close()
 
@@ -382,7 +391,8 @@ that opencode picks it up immediately.
 	        .. " | opencode --stdin && rm " .. vim.fn.shellescape(tmp) })
 	end)
 <
-Then trigger it with: >
+Then trigger it with:
+>
 	:MeowReview export zellij
 <
 
@@ -412,26 +422,36 @@ review.setup({opts})
 	                                   (see |meow-review-configuration|)
 	  `annotation_types`       table     Custom annotation type definitions
 	                                   (see |meow-review-annotation-types|)
-	  `annotation_type_order`  string[]  Tab-cycling order for the add-modal
+	  `annotation_type_order`  string[]  Tab-cycling order for the add modal
 	                                   (see |meow-review-annotation-types|)
 
 						*meow.review.add_comment()*
-review.add_comment()
-	Open the add-comment modal. Call from normal or visual mode.
+review.add_comment([{is_visual}])
+	Open the add-comment modal at the cursor position. Pass `true` for
+	{is_visual} when called from a visual-mode mapping to use the `'<` / `'>`
+	marks as the annotation range.
+
+						*meow.review.edit_comment()*
+review.edit_comment()
+	Open the edit modal for the annotation at the cursor position.
+	When multiple annotations overlap the cursor, opens a picker to choose.
 
 						*meow.review.delete_comment()*
 review.delete_comment()
 	Delete the annotation at the cursor position.
+	When multiple annotations overlap the cursor, opens a picker to choose.
 
 						*meow.review.view_comment()*
 review.view_comment()
 	Open the view popup for the annotation at the cursor position.
+	When multiple annotations overlap the cursor, opens a picker to choose.
 
 						*meow.review.export_review()*
-review.export_review([name])
-	Export annotations. If {name} is given, runs only that exporter.
-	If {name} is omitted, runs all registered exporters.
-	Built-in names: "file", "clipboard".
+review.export_review([{name}])
+	Export annotations using a named exporter. When {name} is given, runs
+	that exporter. When {name} is nil, runs the configured `default_exporter`
+	("clipboard" by default).
+	Built-in names: "file", "file_prompt", "clipboard".
 
 						*meow.review.register_exporter()*
 review.register_exporter({name}, {fn})
@@ -446,7 +466,8 @@ review.unregister_exporter({name})
 
 						*meow.review.clear_all()*
 review.clear_all()
-	Prompt to clear all annotations.
+	Prompt to clear all annotations. Uses `vim.ui.input` — type `yes` to
+	confirm.
 
 						*meow.review.goto_comment()*
 review.goto_comment()
@@ -468,11 +489,12 @@ review.prev_comment()
 ==============================================================================
 HEALTH CHECK					*meow-review-health*
 
-Run the health check to verify the environment: >
+Run the health check to verify the environment:
+>
 	:checkhealth meow.review
 <
 The health check reports:
-- Neovim version (>= 0.8.0 required, 0.10+ recommended)
+- Neovim version (>= 0.11.0 required)
 - nui.nvim availability (required)
 - nvim-treesitter availability (optional)
 - gitsigns.nvim availability (optional)
@@ -485,8 +507,8 @@ The health check reports:
 ==============================================================================
 CONTRIBUTING					*meow-review-contributing*
 
-Contributions are welcome! Feel free to open an issue or submit a pull
-request at https://github.com/retran/meow.review.nvim
+Open an issue or submit a pull request at:
+https://github.com/retran/meow.review.nvim
 
 Code style:
 - `.stylua.toml`: 4-space indent, 120-column, AutoPreferDouble quotes
@@ -502,7 +524,7 @@ Licensed under the MIT License. See |LICENSE| for details.
 ==============================================================================
 ACKNOWLEDGMENTS					*meow-review-acknowledgments*
 
-`meow.review.nvim` would not be possible without these amazing projects:
+`meow.review.nvim` builds on:
 - Neovim (https://neovim.io/)
 - nui.nvim (https://github.com/MunifTanjim/nui.nvim)
 - nvim-treesitter (https://github.com/nvim-treesitter/nvim-treesitter)
