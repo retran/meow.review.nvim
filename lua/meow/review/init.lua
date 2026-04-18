@@ -450,4 +450,44 @@ function M.prev_comment()
     end
 end
 
+-- ── Status ────────────────────────────────────────────────────────────────────
+
+--- Return a compact status string suitable for embedding in a statusline.
+--- Format: "" when there are no annotations, or "  N" when there are N
+--- annotations, optionally with a per-type breakdown "(Xa Yb …)" when types
+--- differ.
+--- Example: "  3 (2 ISSUE 1 NOTE)"
+---@return string
+function M.status()
+    local s = store()
+    local n = s.count()
+    if n == 0 then
+        return ""
+    end
+
+    -- Count per type
+    local counts = {}
+    local type_order = {}
+    for _, ann in ipairs(s.sorted()) do
+        local t = ann.type or "?"
+        if not counts[t] then
+            counts[t] = 0
+            table.insert(type_order, t)
+        end
+        counts[t] = counts[t] + 1
+    end
+
+    -- Build type breakdown if more than one type present
+    local detail = ""
+    if #type_order > 1 then
+        local parts = {}
+        for _, t in ipairs(type_order) do
+            table.insert(parts, counts[t] .. " " .. t)
+        end
+        detail = " (" .. table.concat(parts, ", ") .. ")"
+    end
+
+    return "  " .. n .. detail
+end
+
 return M
