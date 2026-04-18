@@ -212,4 +212,85 @@ describe("meow.review.export", function()
             assert.is_true(notified)
         end)
     end)
+
+    -- ── avante / codecompanion auto-registration ──────────────────────────────
+
+    describe("setup_builtins() avante/codecompanion auto-registration", function()
+        it("registers 'avante' exporter when avante.api is available", function()
+            local ask_args = {}
+            package.loaded["avante.api"] = {
+                ask = function(opts) table.insert(ask_args, opts) end,
+            }
+            export.setup_builtins({ disabled_exporters = {} })
+            local list = export.list()
+            local found = false
+            for _, n in ipairs(list) do
+                if n == "avante" then found = true end
+            end
+            assert.is_true(found)
+            package.loaded["avante.api"] = nil
+        end)
+
+        it("does NOT register 'avante' exporter when avante.api is absent", function()
+            package.loaded["avante.api"] = nil
+            export.setup_builtins({ disabled_exporters = {} })
+            local list = export.list()
+            for _, n in ipairs(list) do
+                assert.not_equal("avante", n)
+            end
+        end)
+
+        it("registers 'codecompanion' exporter when codecompanion is available", function()
+            package.loaded["codecompanion"] = {
+                chat = function() end,
+            }
+            export.setup_builtins({ disabled_exporters = {} })
+            local list = export.list()
+            local found = false
+            for _, n in ipairs(list) do
+                if n == "codecompanion" then found = true end
+            end
+            assert.is_true(found)
+            package.loaded["codecompanion"] = nil
+        end)
+
+        it("does NOT register 'codecompanion' exporter when codecompanion is absent", function()
+            package.loaded["codecompanion"] = nil
+            export.setup_builtins({ disabled_exporters = {} })
+            local list = export.list()
+            for _, n in ipairs(list) do
+                assert.not_equal("codecompanion", n)
+            end
+        end)
+
+        it("calling 'avante' exporter invokes avante_api.ask with markdown", function()
+            local ask_args = {}
+            package.loaded["avante.api"] = {
+                ask = function(opts) table.insert(ask_args, opts) end,
+            }
+            export.setup_builtins({ disabled_exporters = {} })
+            -- Manually call the registered avante exporter
+            local avante_fn
+            for _, n in ipairs(export.list()) do
+                if n == "avante" then
+                    -- retrieve via a spy: re-register to capture
+                    avante_fn = true
+                    break
+                end
+            end
+            assert.is_true(avante_fn)
+            -- Call export with a stub store
+            package.loaded["meow.review.store"] = {
+                sorted = function()
+                    return {{ file = "f.lua", lnum = 1, end_lnum = 1, type = "ISSUE", text = "hi", timestamp = os.time() }}
+                end,
+                current_root = function() return "/tmp" end,
+            }
+            export.export("avante", "markdown")
+            assert.equal(1, #ask_args)
+            assert.truthy(ask_args[1].question:find("hi"))
+            package.loaded["avante.api"] = nil
+            package.loaded["meow.review.store"] = nil
+        end)
+    end)
 end)

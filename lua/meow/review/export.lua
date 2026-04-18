@@ -455,6 +455,26 @@ function M.setup_builtins(cfg)
         return M.build_markdown(annotations)
     end)
     M.register_formatter("json", format_json)
+
+    -- Auto-register avante.nvim exporter if the plugin is available
+    if not disabled_set["avante"] then
+        local ok_avante, avante_api = pcall(require, "avante.api")
+        if ok_avante and avante_api then
+            M.register("avante", function(markdown, _root)
+                avante_api.ask({ question = markdown })
+            end)
+        end
+    end
+
+    -- Auto-register codecompanion.nvim exporter if the plugin is available
+    if not disabled_set["codecompanion"] then
+        local ok_cc, codecompanion = pcall(require, "codecompanion")
+        if ok_cc and codecompanion then
+            M.register("codecompanion", function(markdown, _root)
+                codecompanion.chat({ content = markdown })
+            end)
+        end
+    end
 end
 
 return M
