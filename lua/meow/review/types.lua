@@ -108,8 +108,10 @@ end
 --- Register highlight groups for all active annotation types.
 --- Called once from setup() via signs.setup_signs().
 function M.setup_highlights()
-    -- No-op: highlight groups (hl field) are referenced directly in extmark sign_hl_group.
-    -- No sign_define() needed when using the extmark sign API.
+    -- Resolved: dimmed, neutral tone.
+    vim.api.nvim_set_hl(0, "MeowReviewResolved", { link = "Comment", default = true })
+    -- Stale: warn-level, indicates the annotated code has changed.
+    vim.api.nvim_set_hl(0, "MeowReviewStale", { link = "DiagnosticWarn", default = true })
 end
 
 --- Return the type definition table for a given type string, or nil.

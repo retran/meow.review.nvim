@@ -244,6 +244,15 @@ function M.open_view_popup(annotation)
 
     local lines = {}
 
+    -- Status badges
+    if annotation.resolved then
+        table.insert(lines, " \u{2713} RESOLVED")
+        table.insert(lines, "")
+    elseif annotation.stale then
+        table.insert(lines, " \u{7e} STALE \u{2014} code at this line has changed")
+        table.insert(lines, "")
+    end
+
     -- Location
     local loc
     if annotation.hunk_head then
@@ -285,6 +294,15 @@ function M.open_view_popup(annotation)
 
     local type_label = string.format("%s \u{2014} %s", annotation.type, annotation.file or "")
 
+    local border_hl
+    if annotation.resolved then
+        border_hl = "MeowReviewResolved"
+    elseif annotation.stale then
+        border_hl = "MeowReviewStale"
+    else
+        border_hl = t.hl or "FloatBorder"
+    end
+
     local popup = Popup({
         position = "50%",
         size = { width = width, height = height },
@@ -300,7 +318,7 @@ function M.open_view_popup(annotation)
             },
         },
         win_options = {
-            winhighlight = "Normal:Normal,FloatBorder:" .. (t.hl or "FloatBorder"),
+            winhighlight = "Normal:Normal,FloatBorder:" .. border_hl,
         },
         buf_options = {
             modifiable = true,
@@ -340,7 +358,13 @@ local function format_picker_item(ann)
         loc = tostring(ann.lnum)
     end
     local ctx = ann.context and (" \u{2014} " .. ann.context) or ""
-    return string.format("[%s] %s:%s%s \u{2014} %s", ann.type, ann.file, loc, ctx, ann.text or "")
+    local status = ""
+    if ann.resolved then
+        status = "\u{2713} "
+    elseif ann.stale then
+        status = "\u{7e} "
+    end
+    return string.format("%s[%s] %s:%s%s \u{2014} %s", status, ann.type, ann.file, loc, ctx, ann.text or "")
 end
 
 --- Open a picker over a list of annotations using Snacks (if available) or nui.menu.

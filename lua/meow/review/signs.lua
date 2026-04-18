@@ -56,12 +56,22 @@ function M.place(annotation, bufnr)
         end
     end
 
+    -- Determine effective highlight: resolved > stale > normal type hl.
+    local sign_hl
+    if annotation.resolved then
+        sign_hl = "MeowReviewResolved"
+    elseif annotation.stale then
+        sign_hl = "MeowReviewStale"
+    else
+        sign_hl = t.hl
+    end
+
     -- Place extmark with sign_text/sign_hl_group.
     -- col=-1 is the canonical column for sign extmarks (no position conflict with text extmarks).
     local ok, extmark_id = pcall(vim.api.nvim_buf_set_extmark, bufnr, M.NS, annotation.lnum - 1, -1, {
         id = annotation.extmark_id or nil, -- reuse id when re-placing
         sign_text = t.icon,
-        sign_hl_group = t.hl,
+        sign_hl_group = sign_hl,
         priority = 5,
     })
 
@@ -114,6 +124,15 @@ function M.render_buffer(bufnr)
         if ann.file == rel then
             ann.extmark_id = nil -- reset so place() creates a fresh one
             ann.bufnr = nil
+
+            -- Compute stale: annotation has a snippet and it differs from the current line.
+            if ann.snippet and ann.snippet ~= "" and not ann.hunk_head then
+                local cur = vim.api.nvim_buf_get_lines(bufnr, ann.lnum - 1, ann.lnum, false)
+                ann.stale = (cur[1] ~= nil) and (vim.trim(cur[1]) ~= vim.trim(ann.snippet))
+            else
+                ann.stale = false
+            end
+
             M.place(ann, bufnr)
         end
     end
