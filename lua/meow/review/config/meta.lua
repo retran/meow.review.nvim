@@ -59,7 +59,7 @@
 ---@field default_formatter? string Formatter to use when no formatter is specified
 ---  (default "markdown"). Built-ins: "markdown", "json".
 ---@field export_filename? string Filename written by the `file` and `file_prompt` exporters
----  (default ".cache/meow-review/review.md").
+---  (default ".review.md").
 ---  Relative paths are resolved against the project root.
 ---@field store_path? string Path to the annotation store JSON file.
 ---  Relative paths are resolved against the project root; absolute paths are used as-is.

@@ -345,7 +345,7 @@ end
 ---@param root string
 local function export_to_file(markdown, root)
     local ok, cfg = pcall(require, "meow.review.config.internal")
-    local filename = ok and cfg.get().export_filename or ".cache/meow-review/review.md"
+    local filename = ok and cfg.get().export_filename or ".review.md"
     write_to_file(markdown, root, filename)
 end
 
@@ -354,7 +354,7 @@ end
 ---@param root string
 local function export_to_file_prompt(markdown, root)
     local ok, cfg = pcall(require, "meow.review.config.internal")
-    local default = ok and cfg.get().export_filename or ".cache/meow-review/review.md"
+    local default = ok and cfg.get().export_filename or ".review.md"
     vim.ui.input({ prompt = "Export filename: ", default = default }, function(input)
         if not input or input == "" then
             vim.notify("MeowReview: Export cancelled.", vim.log.levels.INFO)

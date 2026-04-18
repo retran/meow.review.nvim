@@ -225,7 +225,7 @@ local function provide_troubleshooting_info()
     vim.health.info("Configuration location: vim.g.meow_review")
     vim.health.info("Health check: :checkhealth meow.review")
     vim.health.info("Annotation store: configurable via store_path (default: .cache/meow-review/annotations.json)")
-    vim.health.info("Export output: .meow-review.md (project root) + system clipboard")
+    vim.health.info("Export output: .review.md (project root) + system clipboard")
 
     vim.health.info([[
 Minimal configuration example:

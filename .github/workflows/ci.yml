@@ -21,36 +21,11 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install Neovim (${{ matrix.nvim }})
-        run: |
-          set -e
-          VERSION="${{ matrix.nvim }}"
-          DEST="$HOME/nvim-$VERSION"
-          BIN="$HOME/.local/bin"
-          mkdir -p "$BIN"
-
-          # Resolve "stable" / "nightly" to a download URL
-          if [ "$VERSION" = "nightly" ]; then
-            URL="https://github.com/neovim/neovim/releases/download/nightly/nvim-linux-x86_64.tar.gz"
-          else
-            # Resolve "stable" tag to the concrete release URL
-            URL="https://github.com/neovim/neovim/releases/download/stable/nvim-linux-x86_64.tar.gz"
-          fi
-
-          # Download with up to 5 retries
-          for attempt in 1 2 3 4 5; do
-            echo "Attempt $attempt: downloading $URL"
-            if curl -fL --retry 3 --retry-delay 10 -o /tmp/nvim.tar.gz "$URL"; then
-              break
-            fi
-            echo "Download failed, waiting 30s before retry..."
-            sleep 30
-          done
-
-          tar -xzf /tmp/nvim.tar.gz -C "$HOME"
-          # Tarball extracts to nvim-linux-x86_64/
-          ln -sf "$HOME/nvim-linux-x86_64/bin/nvim" "$BIN/nvim"
-          echo "$BIN" >> "$GITHUB_PATH"
-          nvim --version
+        uses: rhysd/action-setup-vim@v1
+        with:
+          neovim: true
+          version: ${{ matrix.nvim }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install LuaRocks
         run: |

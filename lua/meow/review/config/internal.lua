@@ -39,7 +39,7 @@ local default_config = {
     ---@type string
     default_formatter = "markdown",
     ---@type string
-    export_filename = ".cache/meow-review/review.md",
+    export_filename = ".review.md",
     ---@type string
     store_path = ".cache/meow-review/annotations.json",
     ---@type number

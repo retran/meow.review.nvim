@@ -175,7 +175,7 @@ require("meow.review").setup({
 
     -- Filename written by the `file` and `file_prompt` exporters.
     -- Relative paths are resolved against the project root.
-    export_filename = ".cache/meow-review/review.md",
+    export_filename = ".review.md",
 
     -- Path to the annotation store JSON file.
     -- Relative paths are resolved against the project root; absolute paths are used as-is.
