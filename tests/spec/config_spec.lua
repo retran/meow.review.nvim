@@ -66,6 +66,7 @@ describe("meow.review.config.internal", function()
                 modal_height = 6,
                 modal_cycle_key = "<C-t>",
                 prompt_preamble = "text",
+                export_summary = true,
             })
             assert.is_true(ok)
             assert.is_nil(err)
@@ -83,6 +84,7 @@ describe("meow.review.config.internal", function()
                 modal_height = 6,
                 modal_cycle_key = "<C-t>",
                 prompt_preamble = "text",
+                export_summary = true,
             })
             assert.is_false(ok)
             assert.is_string(err)
@@ -100,6 +102,7 @@ describe("meow.review.config.internal", function()
                 modal_height = 6,
                 modal_cycle_key = "<C-t>",
                 prompt_preamble = "text",
+                export_summary = true,
             })
             assert.is_false(ok)
             assert.is_string(err)

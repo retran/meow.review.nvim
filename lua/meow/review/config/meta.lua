@@ -62,6 +62,7 @@
 ---@field annotation_types? table<string, meow.review.AnnotationType> Custom annotation type definitions. Replaces the default set (ISSUE, SUGGESTION, NOTE) when provided.
 ---@field annotation_type_order? string[] Tab-cycling order for the add-modal. Defaults to sorted keys of annotation_types.
 ---@field prompt_preamble? string Text inserted after the document heading in the exported Markdown. Defaults to an instruction that asks the AI agent to apply each annotation as a targeted fix. Set to "" to omit it.
+---@field export_summary? boolean When true (default), inject a summary block listing file count, annotation count, type breakdown, and file list after the preamble.
 
 ---@type meow.review.Config | fun(): meow.review.Config | nil
 vim.g.meow_review = vim.g.meow_review

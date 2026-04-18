@@ -224,6 +224,37 @@ local function format_snippet(ann)
     return string.format("```%s\n%s\n```", lang, ann.snippet)
 end
 
+--- Build the summary block for AI context: file count, annotation count, type breakdown, file list.
+---@param annotations meow.review.Annotation[]
+---@return string
+local function build_summary_block(annotations)
+    local file_set = {}
+    local type_counts = {}
+    for _, ann in ipairs(annotations) do
+        if ann.file then file_set[ann.file] = true end
+        if ann.type then type_counts[ann.type] = (type_counts[ann.type] or 0) + 1 end
+    end
+
+    local files = {}
+    for f in pairs(file_set) do table.insert(files, f) end
+    table.sort(files)
+
+    local type_parts = {}
+    for t, c in pairs(type_counts) do
+        table.insert(type_parts, c .. " " .. t)
+    end
+    table.sort(type_parts)
+
+    local breakdown = #type_parts > 0 and (" (" .. table.concat(type_parts, ", ") .. ")") or ""
+    local summary_line = string.format(
+        "Files reviewed: %d  |  Annotations: %d%s",
+        #files, #annotations, breakdown
+    )
+    local files_line = "Files: " .. table.concat(files, ", ")
+
+    return "## Summary\n" .. summary_line .. "\n" .. files_line
+end
+
 --- Build the full Markdown document from a sorted annotation list.
 ---
 --- The output is structured for AI agent consumption:
@@ -232,11 +263,16 @@ end
 --- - The heading format `[TYPE] file.lua — line N — symbol` is machine-parseable.
 ---@param annotations meow.review.Annotation[]
 ---@param preamble? string Optional preamble override. Uses config value when nil.
+---@param export_summary_flag? boolean Whether to include the summary block. Uses config value when nil.
 ---@return string markdown
-function M.build_markdown(annotations, preamble)
+function M.build_markdown(annotations, preamble, export_summary_flag)
+    local ok, cfg = pcall(require, "meow.review.config.internal")
+    local config = ok and cfg.get() or {}
     if preamble == nil then
-        local ok, cfg = pcall(require, "meow.review.config.internal")
-        preamble = ok and cfg.get().prompt_preamble or ""
+        preamble = config.prompt_preamble or ""
+    end
+    if export_summary_flag == nil then
+        export_summary_flag = config.export_summary ~= false
     end
 
     local lines = {}
@@ -245,6 +281,11 @@ function M.build_markdown(annotations, preamble)
     table.insert(lines, "")
     if preamble and preamble ~= "" then
         table.insert(lines, preamble)
+        table.insert(lines, "")
+    end
+
+    if export_summary_flag and #annotations > 0 then
+        table.insert(lines, build_summary_block(annotations))
         table.insert(lines, "")
     end
 

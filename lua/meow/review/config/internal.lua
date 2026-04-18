@@ -54,6 +54,8 @@ local default_config = {
     prompt_preamble = "The following annotations were left during a code review. "
         .. "For each annotation, read the code snippet and comment carefully, then apply the requested fix directly to the file. "
         .. "Prefer minimal, targeted edits. Do not refactor unrelated code.",
+    ---@type boolean
+    export_summary = true,
 }
 
 ---@param cfg meow.review.InternalConfig
@@ -71,6 +73,7 @@ function M.validate(cfg)
         modal_height = { cfg.modal_height, "number" },
         modal_cycle_key = { cfg.modal_cycle_key, "string" },
         prompt_preamble = { cfg.prompt_preamble, "string" },
+        export_summary = { cfg.export_summary, "boolean" },
     })
     if not ok then
         -- Prefix with the config table path so users know exactly what is wrong

@@ -126,4 +126,45 @@ describe("meow.review.export", function()
             assert.falsy(md:find("MY PREAMBLE"))
         end)
     end)
+
+    -- ── Summary block ─────────────────────────────────────────────────────────
+
+    describe("build_markdown() summary block", function()
+        local anns = {
+            { file = "src/foo.lua", lnum = 1, end_lnum = 1, type = "ISSUE",      text = "a", timestamp = os.time() },
+            { file = "src/bar.lua", lnum = 2, end_lnum = 2, type = "SUGGESTION", text = "b", timestamp = os.time() },
+            { file = "src/foo.lua", lnum = 5, end_lnum = 5, type = "NOTE",        text = "c", timestamp = os.time() },
+        }
+
+        it("export_summary=true produces a ## Summary section", function()
+            local md = export.build_markdown(anns, "", true)
+            assert.truthy(md:find("## Summary"))
+        end)
+
+        it("summary line counts match actual annotations", function()
+            local md = export.build_markdown(anns, "", true)
+            assert.truthy(md:find("Annotations: 3"))
+        end)
+
+        it("summary files count matches unique files", function()
+            local md = export.build_markdown(anns, "", true)
+            assert.truthy(md:find("Files reviewed: 2"))
+        end)
+
+        it("summary file list contains each unique file", function()
+            local md = export.build_markdown(anns, "", true)
+            assert.truthy(md:find("src/foo.lua"))
+            assert.truthy(md:find("src/bar.lua"))
+        end)
+
+        it("export_summary=false suppresses ## Summary", function()
+            local md = export.build_markdown(anns, "", false)
+            assert.falsy(md:find("## Summary"))
+        end)
+
+        it("empty preamble + export_summary=true still produces ## Summary", function()
+            local md = export.build_markdown(anns, "", true)
+            assert.truthy(md:find("## Summary"))
+        end)
+    end)
 end)
