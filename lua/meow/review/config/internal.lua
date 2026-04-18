@@ -37,6 +37,8 @@ local default_config = {
     ---@type string
     default_exporter = "clipboard",
     ---@type string
+    default_formatter = "markdown",
+    ---@type string
     export_filename = ".cache/meow-review/review.md",
     ---@type string
     store_path = ".cache/meow-review/annotations.json",
@@ -62,6 +64,7 @@ function M.validate(cfg)
         context_lines = { cfg.context_lines, "number" },
         disabled_exporters = { cfg.disabled_exporters, "table" },
         default_exporter = { cfg.default_exporter, "string" },
+        default_formatter = { cfg.default_formatter, "string" },
         export_filename = { cfg.export_filename, "string" },
         store_path = { cfg.store_path, "string" },
         modal_width = { cfg.modal_width, "number" },

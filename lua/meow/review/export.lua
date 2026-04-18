@@ -33,6 +33,66 @@
 ---       (defaults to "clipboard").
 local M = {}
 
+-- ── Formatter registry ────────────────────────────────────────────────────────
+
+---@alias meow.review.FormatterFn fun(annotations: meow.review.Annotation[]): string
+
+--- Ordered list of registered formatter names.
+---@type string[]
+local formatter_order = {}
+
+--- Map of formatter name → function.
+---@type table<string, meow.review.FormatterFn>
+local formatters = {}
+
+--- Register a named formatter function.
+--- A formatter receives the sorted annotation list and returns a string.
+--- Replaces any formatter registered under the same name.
+---@param name string Unique formatter name (e.g. "markdown", "json")
+---@param fn meow.review.FormatterFn
+function M.register_formatter(name, fn)
+    if not formatters[name] then
+        table.insert(formatter_order, name)
+    end
+    formatters[name] = fn
+end
+
+--- Unregister a named formatter.
+---@param name string
+function M.unregister_formatter(name)
+    formatters[name] = nil
+    for i, n in ipairs(formatter_order) do
+        if n == name then
+            table.remove(formatter_order, i)
+            break
+        end
+    end
+end
+
+--- Return the list of currently registered formatter names in insertion order.
+---@return string[]
+function M.list_formatters()
+    local result = {}
+    for _, name in ipairs(formatter_order) do
+        if formatters[name] then
+            table.insert(result, name)
+        end
+    end
+    return result
+end
+
+--- Built-in JSON formatter: returns a compact JSON representation.
+---@param annotations meow.review.Annotation[]
+---@return string
+local function format_json(annotations)
+    local ok, encoded = pcall(vim.json.encode, { annotations = annotations, exported_at = os.time() })
+    if not ok then
+        vim.notify("MeowReview: JSON encode failed: " .. tostring(encoded), vim.log.levels.ERROR)
+        return "{}"
+    end
+    return encoded
+end
+
 -- ── Exporter registry ─────────────────────────────────────────────────────────
 
 ---@alias meow.review.ExporterFn fun(markdown: string, root: string)
@@ -268,17 +328,30 @@ end
 
 --- Prepare the Markdown from the store and call one named exporter.
 --- When {name} is nil, uses the `default_exporter` from config ("clipboard" by default).
---- Emits a warning if the exporter is not registered.
+--- When {formatter_name} is nil, uses the `default_formatter` from config ("markdown" by default).
+--- Emits a warning if the exporter or formatter is not registered.
 ---@param name string|nil Exporter name, or nil to use the configured default.
-function M.export(name)
+---@param formatter_name string|nil Formatter name, or nil to use the configured default.
+function M.export(name, formatter_name)
+    local ok_cfg, cfg_mod = pcall(require, "meow.review.config.internal")
+    local cfg = ok_cfg and cfg_mod.get() or {}
+
     if not name then
-        local ok, cfg = pcall(require, "meow.review.config.internal")
-        name = ok and cfg.get().default_exporter or "clipboard"
+        name = cfg.default_exporter or "clipboard"
+    end
+    if not formatter_name then
+        formatter_name = cfg.default_formatter or "markdown"
     end
 
     local fn = exporters[name]
     if not fn then
         vim.notify("MeowReview: No exporter registered: " .. name, vim.log.levels.WARN)
+        return
+    end
+
+    local fmt_fn = formatters[formatter_name]
+    if not fmt_fn then
+        vim.notify("MeowReview: No formatter registered: " .. formatter_name, vim.log.levels.WARN)
         return
     end
 
@@ -290,16 +363,16 @@ function M.export(name)
         return
     end
 
-    local markdown = M.build_markdown(sorted)
+    local output = fmt_fn(sorted)
     local root = store.current_root()
 
-    local ok, err = pcall(fn, markdown, root)
+    local ok, err = pcall(fn, output, root)
     if not ok then
         vim.notify("MeowReview: Exporter '" .. name .. "' failed: " .. tostring(err), vim.log.levels.ERROR)
     end
 end
 
---- Register the built-in exporters based on configuration.
+--- Register the built-in exporters and formatters based on configuration.
 --- Called from `init.lua` during `setup()`.
 ---@param cfg meow.review.Config
 function M.setup_builtins(cfg)
@@ -318,6 +391,12 @@ function M.setup_builtins(cfg)
     if not disabled_set["clipboard"] then
         M.register("clipboard", export_to_clipboard)
     end
+
+    -- Register built-in formatters (always registered; not affected by disabled_exporters)
+    M.register_formatter("markdown", function(annotations)
+        return M.build_markdown(annotations)
+    end)
+    M.register_formatter("json", format_json)
 end
 
 return M

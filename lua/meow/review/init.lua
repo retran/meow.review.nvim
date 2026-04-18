@@ -66,6 +66,20 @@ function M.unregister_exporter(name)
     exp().unregister(name)
 end
 
+--- Register a named formatter function.
+--- A formatter receives the sorted annotation list and returns a string.
+---@param name string Unique formatter name (e.g. "markdown", "json", "sarif")
+---@param fn fun(annotations: meow.review.Annotation[]): string
+function M.register_formatter(name, fn)
+    exp().register_formatter(name, fn)
+end
+
+--- Unregister a named formatter.
+---@param name string
+function M.unregister_formatter(name)
+    exp().unregister_formatter(name)
+end
+
 local function cfg()
     return require("meow.review.config.internal").get()
 end

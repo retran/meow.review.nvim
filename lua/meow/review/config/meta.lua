@@ -52,6 +52,7 @@
 ---@field context_lines? number Lines of source context to capture before and after the annotated range (default 3). Set to 0 to disable snippet capture.
 ---@field disabled_exporters? string[] Built-in exporter names to disable (e.g. {"clipboard"} to disable the clipboard exporter).
 ---@field default_exporter? string Exporter to run when no name is given to `:MeowReview export` (default "clipboard").
+---@field default_formatter? string Formatter to use when no formatter is specified (default "markdown"). Built-ins: "markdown", "json".
 ---@field export_filename? string Filename written by the `file` and `file_prompt` exporters (default ".cache/meow-review/review.md"). Relative paths are resolved against the project root.
 ---@field store_path? string Path to the annotation store JSON file. Relative paths are resolved against the project root; absolute paths are used as-is. Parent directories are created automatically. Default: ".cache/meow-review/annotations.json".
 ---@field modal_width? number Width (in columns) of the add/edit comment modal. Default: 64.
