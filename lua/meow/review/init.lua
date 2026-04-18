@@ -323,10 +323,11 @@ function M.clear_all()
         vim.notify("MeowReview: No annotations.", vim.log.levels.INFO)
         return
     end
-    vim.ui.input(
-        { prompt = string.format("Clear all %d comment(s)? [yes/N] ", n) },
-        function(input)
-            if input and input:lower() == "yes" then
+    vim.ui.select(
+        { "Yes, clear all", "Cancel" },
+        { prompt = string.format("Clear all %d annotation(s)?", n) },
+        function(choice)
+            if choice == "Yes, clear all" then
                 store().clear()
                 signs().render_all()
                 vim.notify("MeowReview: All comments cleared.", vim.log.levels.INFO)
