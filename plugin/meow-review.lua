@@ -95,6 +95,18 @@ local subcommand_tbl = {
             require("meow.review").goto_comment()
         end,
     },
+    goto_file = {
+        impl = function(_, _)
+            if not check_dependencies() then return end
+            require("meow.review").goto_comment_in_file()
+        end,
+    },
+    goto_type = {
+        impl = function(args, _)
+            if not check_dependencies() then return end
+            require("meow.review").goto_comment_by_type(args[1])
+        end,
+    },
     edit = {
         impl = function(_, _)
             if not check_dependencies() then return end
@@ -210,6 +222,16 @@ vim.keymap.set("n", "<Plug>(MeowReviewGoto)", function()
     if not check_dependencies() then return end
     require("meow.review").goto_comment()
 end, { desc = "Go to review comment" })
+
+vim.keymap.set("n", "<Plug>(MeowReviewGotoFile)", function()
+    if not check_dependencies() then return end
+    require("meow.review").goto_comment_in_file()
+end, { desc = "Go to review comment in current file" })
+
+vim.keymap.set("n", "<Plug>(MeowReviewGotoType)", function()
+    if not check_dependencies() then return end
+    require("meow.review").goto_comment_by_type()
+end, { desc = "Go to review comment filtered by type" })
 
 vim.keymap.set("n", "<Plug>(MeowReviewReload)", function()
     require("meow.review").reload()

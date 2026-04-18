@@ -360,6 +360,68 @@ function M.goto_comment()
     end)
 end
 
+--- Open a picker showing only annotations for the current file.
+function M.goto_comment_in_file()
+    local s = store()
+    local rel = s.current_file()
+    if not rel then
+        vim.notify("MeowReview: No file open.", vim.log.levels.WARN)
+        return
+    end
+    local filtered = vim.tbl_filter(function(a) return a.file == rel end, s.sorted())
+    if #filtered == 0 then
+        vim.notify("MeowReview: No annotations in current file.", vim.log.levels.INFO)
+        return
+    end
+    ui().open_picker(filtered, "Go to Comment (this file)", function(ann)
+        M._jump_to(ann)
+    end)
+end
+
+--- Open a picker pre-filtered to annotations of a given type.
+--- If `type_name` is nil, shows a type-selection picker first.
+---@param type_name string|nil
+function M.goto_comment_by_type(type_name)
+    local s = store()
+    local all = s.sorted()
+    if #all == 0 then
+        vim.notify("MeowReview: No annotations.", vim.log.levels.INFO)
+        return
+    end
+
+    local function show_picker(t)
+        local filtered = vim.tbl_filter(function(a) return a.type == t end, all)
+        if #filtered == 0 then
+            vim.notify("MeowReview: No annotations of type " .. t .. ".", vim.log.levels.INFO)
+            return
+        end
+        ui().open_picker(filtered, "Go to Comment (" .. t .. ")", function(ann)
+            M._jump_to(ann)
+        end)
+    end
+
+    if type_name then
+        show_picker(type_name)
+        return
+    end
+
+    -- Collect unique types that have annotations
+    local types_seen = {}
+    local type_list = {}
+    for _, ann in ipairs(all) do
+        if not types_seen[ann.type] then
+            types_seen[ann.type] = true
+            table.insert(type_list, ann.type)
+        end
+    end
+
+    vim.ui.select(type_list, { prompt = "Select annotation type:" }, function(choice)
+        if choice then
+            show_picker(choice)
+        end
+    end)
+end
+
 -- ── Reload ────────────────────────────────────────────────────────────────────
 
 --- Reload annotations from `.meow-review.json` and re-render all signs.

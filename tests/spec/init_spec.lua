@@ -54,6 +54,9 @@ describe("meow.review.init", function()
             current_root = function()
                 return "/tmp/test-root"
             end,
+            current_file = function()
+                return "current.lua"
+            end,
             get_store_path = function()
                 return "/tmp/test-root/.cache/meow-review/annotations.json"
             end,
@@ -201,6 +204,63 @@ describe("meow.review.init", function()
             m.setup()
             local groups = vim.api.nvim_get_autocmds({ group = "MeowReviewBufEnter" })
             assert.truthy(#groups > 0, "expected MeowReviewBufEnter autocmd to be registered")
+        end)
+    end)
+
+    describe("goto_comment_in_file()", function()
+        it("notifies when no annotations exist in current file", function()
+            local notified = false
+            local orig = vim.notify
+            vim.notify = function(msg, _)
+                if msg:find("No annotations") then notified = true end
+            end
+            -- current_file returns "current.lua" but store is empty
+            m.goto_comment_in_file()
+            vim.notify = orig
+            assert.is_true(notified)
+        end)
+
+        it("opens picker with only annotations for current file", function()
+            local picker_items
+            package.loaded["meow.review.ui"].open_picker = function(items, _, _)
+                picker_items = items
+            end
+            stub_store.add({ file = "current.lua", lnum = 1, end_lnum = 1, type = "NOTE", text = "a" })
+            stub_store.add({ file = "other.lua", lnum = 2, end_lnum = 2, type = "ISSUE", text = "b" })
+            m.goto_comment_in_file()
+            assert.equal(1, #picker_items)
+            assert.equal("current.lua", picker_items[1].file)
+        end)
+    end)
+
+    describe("goto_comment_by_type()", function()
+        it("notifies when no annotations exist", function()
+            local notified = false
+            local orig = vim.notify
+            vim.notify = function(msg, _)
+                if msg:find("No annotations") then notified = true end
+            end
+            m.goto_comment_by_type("ISSUE")
+            vim.notify = orig
+            assert.is_true(notified)
+        end)
+
+        it("opens picker filtered by given type when annotations of that type exist", function()
+            local picker_items
+            package.loaded["meow.review.ui"].open_picker = function(items, _, _)
+                picker_items = items
+            end
+            stub_store.add({ file = "a.lua", lnum = 1, end_lnum = 1, type = "ISSUE", text = "x" })
+            stub_store.add({ file = "a.lua", lnum = 2, end_lnum = 2, type = "NOTE", text = "y" })
+            m.goto_comment_by_type("ISSUE")
+            assert.equal(1, #picker_items)
+            assert.equal("ISSUE", picker_items[1].type)
+        end)
+
+        it("shows type-selection prompt when type_name is nil", function()
+            stub_store.add({ file = "a.lua", lnum = 1, end_lnum = 1, type = "ISSUE", text = "x" })
+            m.goto_comment_by_type()
+            assert.equal(1, #ui_select_calls)
         end)
     end)
 end)
