@@ -124,6 +124,18 @@ local subcommand_tbl = {
             require("meow.review").validate()
         end,
     },
+    resolve = {
+        impl = function(_, _)
+            if not check_dependencies() then return end
+            require("meow.review").resolve_comment()
+        end,
+    },
+    resolve_all = {
+        impl = function(_, _)
+            if not check_dependencies() then return end
+            require("meow.review").resolve_all_comments()
+        end,
+    },
     next = {
         impl = function(_, _)
             require("meow.review").next_comment()
@@ -245,8 +257,19 @@ vim.keymap.set("n", "<Plug>(MeowReviewPrev)", function()
     require("meow.review").prev_comment()
 end, { desc = "Go to previous review comment" })
 
+vim.keymap.set("n", "<Plug>(MeowReviewResolve)", function()
+    if not check_dependencies() then return end
+    require("meow.review").resolve_comment()
+end, { desc = "Resolve review comment at cursor" })
+
+vim.keymap.set("n", "<Plug>(MeowReviewResolveAll)", function()
+    if not check_dependencies() then return end
+    require("meow.review").resolve_all_comments()
+end, { desc = "Resolve all review comments" })
+
 -- Sign and highlight initialisation (minimal overhead, no module load)
 vim.api.nvim_set_hl(0, "MeowReviewIssue", { link = "DiagnosticError", default = true })
 vim.api.nvim_set_hl(0, "MeowReviewSuggestion", { link = "DiagnosticWarn", default = true })
 vim.api.nvim_set_hl(0, "MeowReviewNote", { link = "DiagnosticInfo", default = true })
 vim.api.nvim_set_hl(0, "MeowReviewStale", { link = "DiagnosticHint", default = true })
+vim.api.nvim_set_hl(0, "MeowReviewResolved", { link = "Comment", default = true })

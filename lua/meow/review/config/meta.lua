@@ -39,6 +39,7 @@
 ---@field hunk_start number|nil Hunk start line in the new file, or nil.
 ---@field hunk_end number|nil Hunk end line in the new file, or nil.
 ---@field timestamp number Unix timestamp when the annotation was created.
+---@field resolved boolean Whether this annotation has been resolved (default false).
 
 ---@alias meow.review.ExporterFn fun(markdown: string, root: string)
 

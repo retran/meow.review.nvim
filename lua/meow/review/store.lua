@@ -140,6 +140,7 @@ local SERIAL_FIELDS = {
     "timestamp",
     "snippet",
     "snippet_start",
+    "resolved",
 }
 
 local function annotation_to_json(ann)
@@ -315,6 +316,7 @@ function M.load(root)
         if ann.id and ann.file and ann.lnum and ann.type and ann.text then
             ann.extmark_id = nil
             ann.bufnr = nil
+            if ann.resolved == nil then ann.resolved = false end
             table.insert(state.annotations, ann)
         end
     end
@@ -342,6 +344,7 @@ end
 function M.add(annotation)
     annotation.id = make_id()
     annotation.timestamp = annotation.timestamp or os.time()
+    if annotation.resolved == nil then annotation.resolved = false end
     table.insert(state.annotations, annotation)
     M.save()
     return annotation
@@ -389,6 +392,28 @@ function M.update(id, fields)
         end
     end
     return false
+end
+
+--- Mark an annotation as resolved by id. Saves to disk.
+---@param id string
+---@return boolean resolved
+function M.resolve(id)
+    for _, ann in ipairs(state.annotations) do
+        if ann.id == id then
+            ann.resolved = true
+            M.save()
+            return true
+        end
+    end
+    return false
+end
+
+--- Mark all annotations as resolved. Saves to disk.
+function M.resolve_all()
+    for _, ann in ipairs(state.annotations) do
+        ann.resolved = true
+    end
+    M.save()
 end
 
 --- Remove all annotations and clear all signs/extmarks from every loaded buffer.
@@ -480,9 +505,18 @@ function M.get_at_cursor()
 end
 
 --- Return all annotations sorted by file then lnum.
+--- By default, resolved annotations are excluded.
+---@param opts? { include_resolved?: boolean }
 ---@return meow.review.Annotation[]
-function M.sorted()
-    local copy = vim.deepcopy(state.annotations)
+function M.sorted(opts)
+    opts = opts or {}
+    local include_resolved = opts.include_resolved == true
+    local copy = {}
+    for _, ann in ipairs(state.annotations) do
+        if include_resolved or not ann.resolved then
+            table.insert(copy, vim.deepcopy(ann))
+        end
+    end
     table.sort(copy, function(a, b)
         if a.file ~= b.file then
             return a.file < b.file

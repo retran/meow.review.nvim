@@ -63,6 +63,38 @@ describe("meow.review.init", function()
             get_project_root = function()
                 return "/tmp/test-root"
             end,
+            all = function()
+                local t = {}
+                for _, v in pairs(stub_store._annotations) do
+                    table.insert(t, v)
+                end
+                return t
+            end,
+            get_at_line = function(rel_path, lnum)
+                local result = {}
+                for _, ann in pairs(stub_store._annotations) do
+                    if ann.file == rel_path then
+                        local s = ann.lnum or 1
+                        local e = ann.end_lnum or s
+                        if lnum >= s and lnum <= e then
+                            table.insert(result, ann)
+                        end
+                    end
+                end
+                return result
+            end,
+            resolve = function(id)
+                if stub_store._annotations[id] then
+                    stub_store._annotations[id].resolved = true
+                    return true
+                end
+                return false
+            end,
+            resolve_all = function()
+                for _, ann in pairs(stub_store._annotations) do
+                    ann.resolved = true
+                end
+            end,
         }
 
         stub_signs = {
@@ -261,6 +293,58 @@ describe("meow.review.init", function()
             stub_store.add({ file = "a.lua", lnum = 1, end_lnum = 1, type = "ISSUE", text = "x" })
             m.goto_comment_by_type()
             assert.equal(1, #ui_select_calls)
+        end)
+    end)
+
+    -- ── resolve_comment / resolve_all_comments ────────────────────────────────
+
+    describe("resolve_comment()", function()
+        local notify_calls
+
+        before_each(function()
+            notify_calls = {}
+            vim.notify = function(msg, _) table.insert(notify_calls, msg) end
+            vim.api.nvim_win_get_cursor = function() return { 1, 0 } end
+        end)
+
+        it("warns when no annotation at cursor", function()
+            -- current_file returns "current.lua"; no annotations added
+            m.resolve_comment()
+            assert.truthy(notify_calls[1]:find("No annotation"))
+        end)
+
+        it("resolves annotation at cursor", function()
+            stub_store.add({ file = "current.lua", lnum = 1, end_lnum = 1, type = "ISSUE", text = "fix me" })
+            m.resolve_comment()
+            -- After resolving, the annotation should be marked resolved
+            for _, ann in pairs(stub_store._annotations) do
+                assert.is_true(ann.resolved)
+            end
+        end)
+    end)
+
+    describe("resolve_all_comments()", function()
+        local notify_calls
+
+        before_each(function()
+            notify_calls = {}
+            vim.notify = function(msg, _) table.insert(notify_calls, msg) end
+        end)
+
+        it("notifies when no annotations exist", function()
+            m.resolve_all_comments()
+            assert.truthy(notify_calls[1]:find("No annotations"))
+        end)
+
+        it("resolves all annotations when confirmed", function()
+            stub_store.add({ file = "a.lua", lnum = 1, end_lnum = 1, type = "ISSUE",      text = "x" })
+            stub_store.add({ file = "b.lua", lnum = 2, end_lnum = 2, type = "SUGGESTION", text = "y" })
+            -- Simulate user selecting "Yes, resolve all"
+            vim.ui.select = function(_, _, cb) cb("Yes, resolve all") end
+            m.resolve_all_comments()
+            for _, ann in pairs(stub_store._annotations) do
+                assert.is_true(ann.resolved)
+            end
         end)
     end)
 end)

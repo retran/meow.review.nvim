@@ -586,4 +586,43 @@ function M.validate()
     return require("meow.review.validate").run(s.all(), root)
 end
 
+--- Resolve the annotation(s) at the current cursor position.
+--- If no annotation is found, emits a warning. If multiple annotations are
+--- found on the same line, resolves the first one.
+function M.resolve_comment()
+    local s = store()
+    local rel = s.current_file()
+    if not rel then
+        vim.notify("MeowReview: No file at cursor.", vim.log.levels.WARN)
+        return
+    end
+    local lnum = vim.api.nvim_win_get_cursor(0)[1]
+    local annotations = s.get_at_line(rel, lnum)
+    if #annotations == 0 then
+        vim.notify("MeowReview: No annotation at cursor.", vim.log.levels.WARN)
+        return
+    end
+    s.resolve(annotations[1].id)
+    vim.notify("MeowReview: Annotation resolved.", vim.log.levels.INFO)
+end
+
+--- Resolve all annotations after confirmation via vim.ui.select.
+function M.resolve_all_comments()
+    local s = store()
+    if s.count() == 0 then
+        vim.notify("MeowReview: No annotations to resolve.", vim.log.levels.INFO)
+        return
+    end
+    vim.ui.select(
+        { "Yes, resolve all", "Cancel" },
+        { prompt = "MeowReview: Resolve all annotations?" },
+        function(choice)
+            if choice == "Yes, resolve all" then
+                s.resolve_all()
+                vim.notify("MeowReview: All annotations resolved.", vim.log.levels.INFO)
+            end
+        end
+    )
+end
+
 return M

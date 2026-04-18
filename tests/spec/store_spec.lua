@@ -273,4 +273,54 @@ describe("meow.review.store", function()
             assert.equal("prompt", cfg.auto_gitignore)
         end)
     end)
+
+    -- ── Resolved field ────────────────────────────────────────────────────────
+
+    describe("resolved annotations", function()
+        it("resolve(id) sets resolved=true and returns true", function()
+            local ann = store.add({ file = "a.lua", lnum = 1, end_lnum = 1, type = "ISSUE", text = "bad" })
+            local ok = store.resolve(ann.id)
+            assert.is_true(ok)
+            -- annotation should be marked resolved in state
+            local all = store.sorted({ include_resolved = true })
+            assert.equal(true, all[1].resolved)
+        end)
+
+        it("resolve(unknown_id) returns false without error", function()
+            local ok = store.resolve("nonexistent_id_99999")
+            assert.is_false(ok)
+        end)
+
+        it("resolve_all() marks all annotations resolved", function()
+            store.add({ file = "a.lua", lnum = 1, end_lnum = 1, type = "ISSUE",      text = "x" })
+            store.add({ file = "b.lua", lnum = 2, end_lnum = 2, type = "SUGGESTION", text = "y" })
+            store.resolve_all()
+            local all = store.sorted({ include_resolved = true })
+            for _, ann in ipairs(all) do
+                assert.is_true(ann.resolved)
+            end
+        end)
+
+        it("sorted() default excludes resolved annotations", function()
+            store.add({ file = "a.lua", lnum = 1, end_lnum = 1, type = "ISSUE", text = "unresolved" })
+            local ann = store.add({ file = "b.lua", lnum = 2, end_lnum = 2, type = "NOTE",  text = "resolved" })
+            store.resolve(ann.id)
+            local visible = store.sorted()
+            assert.equal(1, #visible)
+            assert.equal("unresolved", visible[1].text)
+        end)
+
+        it("sorted({ include_resolved = true }) includes resolved annotations", function()
+            store.add({ file = "a.lua", lnum = 1, end_lnum = 1, type = "ISSUE", text = "unresolved" })
+            local ann = store.add({ file = "b.lua", lnum = 2, end_lnum = 2, type = "NOTE",  text = "resolved" })
+            store.resolve(ann.id)
+            local all = store.sorted({ include_resolved = true })
+            assert.equal(2, #all)
+        end)
+
+        it("add() sets resolved=false by default", function()
+            local ann = store.add({ file = "a.lua", lnum = 1, end_lnum = 1, type = "ISSUE", text = "new" })
+            assert.is_false(ann.resolved)
+        end)
+    end)
 end)
