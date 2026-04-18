@@ -370,10 +370,13 @@ end
 --- Prepare the Markdown from the store and call one named exporter.
 --- When {name} is nil, uses the `default_exporter` from config ("clipboard" by default).
 --- When {formatter_name} is nil, uses the `default_formatter` from config ("markdown" by default).
+--- When {filter} is provided, only annotations matching the filter are exported.
 --- Emits a warning if the exporter or formatter is not registered.
 ---@param name string|nil Exporter name, or nil to use the configured default.
 ---@param formatter_name string|nil Formatter name, or nil to use the configured default.
-function M.export(name, formatter_name)
+---@param filter? { file?: string } Optional filter. `file` restricts to a single relative file path.
+---@return boolean success True when export was dispatched without error.
+function M.export(name, formatter_name, filter)
     local ok_cfg, cfg_mod = pcall(require, "meow.review.config.internal")
     local cfg = ok_cfg and cfg_mod.get() or {}
 
@@ -387,21 +390,33 @@ function M.export(name, formatter_name)
     local fn = exporters[name]
     if not fn then
         vim.notify("MeowReview: No exporter registered: " .. name, vim.log.levels.WARN)
-        return
+        return false
     end
 
     local fmt_fn = formatters[formatter_name]
     if not fmt_fn then
         vim.notify("MeowReview: No formatter registered: " .. formatter_name, vim.log.levels.WARN)
-        return
+        return false
     end
 
     local store = require("meow.review.store")
     local sorted = store.sorted()
 
+    -- Apply optional file filter
+    if filter and filter.file then
+        local file_filter = filter.file
+        local filtered = {}
+        for _, ann in ipairs(sorted) do
+            if ann.file == file_filter then
+                table.insert(filtered, ann)
+            end
+        end
+        sorted = filtered
+    end
+
     if #sorted == 0 then
         vim.notify("MeowReview: No annotations.", vim.log.levels.INFO)
-        return
+        return false
     end
 
     local output = fmt_fn(sorted)
@@ -410,7 +425,9 @@ function M.export(name, formatter_name)
     local ok, err = pcall(fn, output, root)
     if not ok then
         vim.notify("MeowReview: Exporter '" .. name .. "' failed: " .. tostring(err), vim.log.levels.ERROR)
+        return false
     end
+    return true
 end
 
 --- Register the built-in exporters and formatters based on configuration.

@@ -347,4 +347,43 @@ describe("meow.review.init", function()
             end
         end)
     end)
+
+    -- ── export_and_clear / export_current_file ────────────────────────────────
+
+    describe("export_and_clear()", function()
+        it("clears store after successful export", function()
+            stub_store.add({ file = "a.lua", lnum = 1, end_lnum = 1, type = "ISSUE", text = "x" })
+            -- Make the export stub return true (success)
+            package.loaded["meow.review.export"].export = function() return true end
+            package.loaded["meow.review.init"] = nil
+            m = require("meow.review.init")
+            m.export_and_clear()
+            assert.equal(0, stub_store.count())
+        end)
+
+        it("does NOT clear store when export fails", function()
+            stub_store.add({ file = "a.lua", lnum = 1, end_lnum = 1, type = "ISSUE", text = "x" })
+            -- Make the export stub return false (failure)
+            package.loaded["meow.review.export"].export = function() return false end
+            package.loaded["meow.review.init"] = nil
+            m = require("meow.review.init")
+            m.export_and_clear()
+            assert.equal(1, stub_store.count())
+        end)
+    end)
+
+    describe("export_current_file()", function()
+        it("calls export with file filter for current file", function()
+            local export_args = {}
+            package.loaded["meow.review.export"].export = function(name, fmt, filter)
+                table.insert(export_args, { name = name, fmt = fmt, filter = filter })
+                return true
+            end
+            package.loaded["meow.review.init"] = nil
+            m = require("meow.review.init")
+            m.export_current_file("clipboard")
+            assert.equal(1, #export_args)
+            assert.equal("current.lua", export_args[1].filter.file)
+        end)
+    end)
 end)

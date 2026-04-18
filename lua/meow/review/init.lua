@@ -625,4 +625,26 @@ function M.resolve_all_comments()
     )
 end
 
+--- Export all annotations and then clear the store on success.
+--- If the export fails (exporter not registered, no annotations, etc.) the store
+--- is left intact.
+---@param name string|nil Exporter name, or nil to use the configured default.
+function M.export_and_clear(name)
+    local success = exp().export(name)
+    if success then
+        store().clear()
+    end
+end
+
+--- Export only the annotations for the current buffer's file.
+---@param name string|nil Exporter name, or nil to use the configured default.
+function M.export_current_file(name)
+    local rel = store().current_file()
+    if not rel then
+        vim.notify("MeowReview: No file in current buffer.", vim.log.levels.WARN)
+        return
+    end
+    exp().export(name, nil, { file = rel })
+end
+
 return M

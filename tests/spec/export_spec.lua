@@ -167,4 +167,49 @@ describe("meow.review.export", function()
             assert.truthy(md:find("## Summary"))
         end)
     end)
+
+    -- ── export() file filter ──────────────────────────────────────────────────
+
+    describe("export() with file filter", function()
+        local captured_output
+        local stub_annotations
+
+        before_each(function()
+            captured_output = nil
+            stub_annotations = {
+                { file = "src/foo.lua", lnum = 1, end_lnum = 1, type = "ISSUE",      text = "foo issue",  timestamp = os.time() },
+                { file = "src/bar.lua", lnum = 2, end_lnum = 2, type = "SUGGESTION", text = "bar suggest", timestamp = os.time() },
+            }
+            package.loaded["meow.review.store"] = {
+                sorted = function() return stub_annotations end,
+                current_root = function() return "/tmp/test" end,
+            }
+            export.setup_builtins({ disabled_exporters = {} })
+            -- Register a spy exporter
+            export.register("spy", function(output, _)
+                captured_output = output
+            end)
+        end)
+
+        after_each(function()
+            package.loaded["meow.review.store"] = nil
+        end)
+
+        it("filter.file restricts output to that file's annotations", function()
+            export.export("spy", "markdown", { file = "src/foo.lua" })
+            assert.truthy(captured_output)
+            assert.truthy(captured_output:find("src/foo.lua"))
+            assert.falsy(captured_output:find("src/bar.lua"))
+        end)
+
+        it("filter.file for nonexistent file warns no annotations", function()
+            local notified = false
+            vim.notify = function(msg, _)
+                if msg:find("No annotations") then notified = true end
+            end
+            local ok = export.export("spy", "markdown", { file = "nonexistent.lua" })
+            assert.is_false(ok)
+            assert.is_true(notified)
+        end)
+    end)
 end)

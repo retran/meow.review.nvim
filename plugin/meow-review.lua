@@ -136,6 +136,28 @@ local subcommand_tbl = {
             require("meow.review").resolve_all_comments()
         end,
     },
+    export_and_clear = {
+        impl = function(args, _)
+            if not check_dependencies() then return end
+            require("meow.review").export_and_clear(args[1])
+        end,
+        complete = function(_)
+            local ok, exp = pcall(require, "meow.review.export")
+            if ok then return exp.list() end
+            return {}
+        end,
+    },
+    export_file = {
+        impl = function(args, _)
+            if not check_dependencies() then return end
+            require("meow.review").export_current_file(args[1])
+        end,
+        complete = function(_)
+            local ok, exp = pcall(require, "meow.review.export")
+            if ok then return exp.list() end
+            return {}
+        end,
+    },
     next = {
         impl = function(_, _)
             require("meow.review").next_comment()
@@ -266,6 +288,16 @@ vim.keymap.set("n", "<Plug>(MeowReviewResolveAll)", function()
     if not check_dependencies() then return end
     require("meow.review").resolve_all_comments()
 end, { desc = "Resolve all review comments" })
+
+vim.keymap.set("n", "<Plug>(MeowReviewExportAndClear)", function()
+    if not check_dependencies() then return end
+    require("meow.review").export_and_clear()
+end, { desc = "Export review and clear annotations" })
+
+vim.keymap.set("n", "<Plug>(MeowReviewExportFile)", function()
+    if not check_dependencies() then return end
+    require("meow.review").export_current_file()
+end, { desc = "Export review for current file" })
 
 -- Sign and highlight initialisation (minimal overhead, no module load)
 vim.api.nvim_set_hl(0, "MeowReviewIssue", { link = "DiagnosticError", default = true })
