@@ -380,6 +380,82 @@ function M.open_picker(annotations, title, on_select)
         return
     end
 
+    -- Second preference: Telescope
+    local telescope_ok, telescope = pcall(require, "telescope")
+    if telescope_ok and telescope then
+        local pickers_ok, pickers = pcall(require, "telescope.pickers")
+        local finders_ok, finders = pcall(require, "telescope.finders")
+        local conf_ok, conf = pcall(require, "telescope.config")
+        local actions_ok, actions = pcall(require, "telescope.actions")
+        local action_state_ok, action_state = pcall(require, "telescope.actions.state")
+
+        if pickers_ok and finders_ok and conf_ok and actions_ok and action_state_ok then
+            local store = require("meow.review.store")
+            local root = store.current_root()
+            local entries = {}
+            for _, ann in ipairs(annotations) do
+                table.insert(entries, {
+                    value = ann,
+                    display = format_picker_item(ann),
+                    ordinal = (ann.file or "") .. ":" .. (ann.lnum or 0) .. " " .. (ann.text or ""),
+                    path = root .. "/" .. (ann.file or ""),
+                    lnum = ann.lnum or 1,
+                })
+            end
+            pickers
+                .new({}, {
+                    prompt_title = title or "Review Comments",
+                    finder = finders.new_table({
+                        results = entries,
+                        entry_maker = function(entry) return entry end,
+                    }),
+                    sorter = conf.values.generic_sorter({}),
+                    previewer = conf.values.grep_previewer({}),
+                    attach_mappings = function(prompt_bufnr, _map)
+                        actions.select_default:replace(function()
+                            actions.close(prompt_bufnr)
+                            local selection = action_state.get_selected_entry()
+                            if selection and selection.value and on_select then
+                                on_select(selection.value)
+                            end
+                        end)
+                        return true
+                    end,
+                })
+                :find()
+            return
+        end
+    end
+
+    -- Third preference: fzf-lua
+    local fzf_ok, fzf = pcall(require, "fzf-lua")
+    if fzf_ok and fzf then
+        local store = require("meow.review.store")
+        local root = store.current_root()
+        local idx_to_ann = {}
+        local fzf_items = {}
+        for i, ann in ipairs(annotations) do
+            idx_to_ann[i] = ann
+            table.insert(fzf_items, string.format("%d\t%s", i, format_picker_item(ann)))
+        end
+        fzf.fzf_exec(fzf_items, {
+            prompt = (title or "Review Comments") .. "> ",
+            previewer = "builtin",
+            fn_transform = function(x) return x end,
+            actions = {
+                ["default"] = function(selected, _)
+                    if not selected or not selected[1] then return end
+                    local idx = tonumber(selected[1]:match("^(%d+)\t"))
+                    if idx and idx_to_ann[idx] and on_select then
+                        on_select(idx_to_ann[idx])
+                    end
+                end,
+            },
+            cwd = root,
+        })
+        return
+    end
+
     -- Fallback: nui.menu
     local Menu = require("nui.menu")
     local event = require("nui.utils.autocmd").event

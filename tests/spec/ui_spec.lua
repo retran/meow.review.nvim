@@ -139,4 +139,37 @@ describe("meow.review.ui", function()
             assert.truthy(top:find("@@ %-1,4 %+1,4 @@"), "expected hunk_head in top label, got: " .. top)
         end)
     end)
+
+    describe("open_picker() adapter fallback", function()
+        it("falls through to nui.menu when snacks/telescope/fzf-lua are absent", function()
+            package.loaded["snacks"] = nil
+            package.loaded["telescope"] = nil
+            package.loaded["fzf-lua"] = nil
+            package.loaded["meow.review.store"] = {
+                current_root = function() return "/tmp" end,
+            }
+            -- Stub nui.menu as a callable that returns a mock menu
+            package.loaded["nui.menu"] = setmetatable({}, {
+                __call = function(_, _, _)
+                    return {
+                        mount = function() end,
+                        on = function() end,
+                    }
+                end,
+                __index = {
+                    item = function(label, data)
+                        return { text = label, annotation = data and data.annotation }
+                    end,
+                },
+            })
+            package.loaded["meow.review.ui"] = nil
+            local fresh_ui = require("meow.review.ui")
+            local ok = pcall(function()
+                fresh_ui.open_picker({
+                    { file = "a.lua", lnum = 1, type = "ISSUE", text = "x" },
+                }, "Test", function() end)
+            end)
+            assert.is_true(ok)
+        end)
+    end)
 end)
