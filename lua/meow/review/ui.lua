@@ -203,8 +203,24 @@ end
 function M.open_edit_modal(annotation, on_confirm)
     local existing_lines = vim.split(annotation.text or "", "\n", { plain = true })
 
+    -- Build a rich top label: "Edit — file:line [— symbol]"
+    local loc_str
+    if annotation.hunk_head then
+        loc_str = "Hunk: " .. annotation.hunk_head
+    else
+        local s = annotation.lnum or 1
+        local e = annotation.end_lnum or s
+        if s == e then
+            loc_str = string.format("%s:%d", annotation.file or "", s)
+        else
+            loc_str = string.format("%s:%d\u{2013}%d", annotation.file or "", s, e)
+        end
+    end
+    local ctx_str = (annotation.context and annotation.context ~= "") and (" \u{2014} " .. annotation.context) or ""
+    local top_label = " Edit — " .. loc_str .. ctx_str .. " "
+
     open_modal({
-        top_label = " Edit Review Comment ",
+        top_label = top_label,
         initial_type = annotation.type,
         initial_lines = existing_lines,
         cursor_at_end = true,
