@@ -127,4 +127,27 @@ describe["has_file returns true iff file has annotations"] = function()
     T.expect.equality(child.lua_get("require('meow.review.store').has_file('absent.lua')"), false)
 end
 
+-- ── ID uniqueness ─────────────────────────────────────────────────────────────
+
+describe["add() generates unique IDs for rapid successive calls"] = function()
+    for i = 1, 10 do
+        child.lua("require('meow.review.store').add({ file = 'f.lua', lnum = " .. i .. ", type = 'NOTE', text = 'x" .. i .. "' })")
+    end
+    local all = child.lua_get("require('meow.review.store').all()")
+    local seen = {}
+    for _, ann in ipairs(all) do
+        T.expect.equality(seen[ann.id], nil) -- no duplicate
+        seen[ann.id] = true
+    end
+    T.expect.equality(#all, 10)
+end
+
+describe["add() IDs are non-empty strings"] = function()
+    child.lua("_G._ann2 = require('meow.review.store').add({ file = 'f.lua', lnum = 1, type = 'NOTE', text = 'y' })")
+    local id = child.lua_get("_G._ann2.id")
+    T.expect.no_equality(id, nil)
+    T.expect.no_equality(id, "")
+    T.expect.equality(type(id), "string")
+end
+
 return describe

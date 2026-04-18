@@ -98,8 +98,31 @@ end
 
 -- ── Persistence ───────────────────────────────────────────────────────────────
 
-local FILENAME = ".meow-review.json"
 local VERSION = 1
+
+--- Resolve the absolute path to the annotation store file.
+--- The configured `store_path` may be relative (resolved against the project root)
+--- or absolute. Parent directories are created automatically on first write.
+---@param root string
+---@return string
+local function resolve_store_path(root)
+    local cfg = require("meow.review.config.internal").get()
+    local p = cfg.store_path
+    if vim.fn.fnamemodify(p, ":p") == p then
+        -- Already absolute
+        return p
+    end
+    return root .. "/" .. p
+end
+
+--- Ensure all parent directories of `path` exist.
+---@param path string
+local function ensure_parent_dirs(path)
+    local dir = vim.fn.fnamemodify(path, ":h")
+    if vim.fn.isdirectory(dir) == 0 then
+        vim.fn.mkdir(dir, "p")
+    end
+end
 
 -- Fields that are serialised to disk (runtime tracking fields excluded).
 local SERIAL_FIELDS = {
@@ -139,12 +162,13 @@ local function sync_extmark_positions()
     end
 end
 
---- Write all annotations to `.meow-review.json` in the project root.
+--- Write all annotations to the configured store path under the project root.
 function M.save()
     sync_extmark_positions()
 
     local root = M.current_root()
-    local path = root .. "/" .. FILENAME
+    local path = resolve_store_path(root)
+    ensure_parent_dirs(path)
 
     local data = {
         version = VERSION,
@@ -166,13 +190,13 @@ function M.save()
     f:close()
 end
 
---- Load annotations from `.meow-review.json` in the given (or current) root.
+--- Load annotations from the configured store path in the given (or current) root.
 ---@param root string|nil
 function M.load(root)
     root = root or M.current_root()
     state.project_root = root
 
-    local path = root .. "/" .. FILENAME
+    local path = resolve_store_path(root)
     local f = io.open(path, "r")
     if not f then
         state.annotations = {}
@@ -212,8 +236,13 @@ end
 
 -- ── ID generation ─────────────────────────────────────────────────────────────
 
+--- Generate a collision-resistant unique ID.
+--- Uses `vim.uv.hrtime()` (nanosecond monotonic clock) combined with a random
+--- suffix to make simultaneous add() calls within the same millisecond safe.
 local function make_id()
-    return string.format("%d_%d", os.time(), math.random(100000, 999999))
+    local uv = vim.uv or (pcall(require, "luv") and require("luv")) or nil
+    local ts = (uv and uv.hrtime) and uv.hrtime() or (os.time() * 1e9)
+    return string.format("%d_%d", ts, math.random(100000, 999999))
 end
 
 -- ── CRUD ──────────────────────────────────────────────────────────────────────
