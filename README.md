@@ -30,9 +30,15 @@ Part of the [project meow](https://github.com/retran/meow) plugin family.
 - **Typed annotations** — ISSUE, SUGGESTION, NOTE with distinct icons and highlight groups (fully customizable)
 - **Contextual capture** — Treesitter symbol name (function/class) attached to each annotation
 - **Hunk detection** — automatically associates annotations with git hunks (gitsigns) or vimdiff hunks
-- **JSON persistence** — `.meow-review.json` at the project root; survives Neovim restarts
+- **JSON persistence** — store at `.cache/meow-review/annotations.json`; survives Neovim restarts
 - **Pluggable export** — register custom exporters; built-in `file`, `file_prompt`, and `clipboard` targets included
-- **Navigation** — jump forward/backward between annotations across files
+- **Formatter registry** — built-in `markdown` and `json` formatters; register custom formatters
+- **avante.nvim / codecompanion.nvim** — auto-registered exporters when those plugins are detected
+- **Smart export** — `## Summary` preamble block, file filter (`export_current_file`), export-and-clear workflow
+- **Resolved state** — mark annotations resolved; resolved annotations excluded from export by default
+- **Stale detection** — validate annotations against current file; highlight stale ones
+- **Navigation** — jump forward/backward between annotations across files; filter by file or type
+- **Statusline integration** — `status()` returns annotation count string for lualine/heirline
 - **Sign column** — per-type signs track position drift as buffers are edited (extmarks)
 - **`:checkhealth`** — `meow.review` health check reports dependency status, config, and exporters
 
@@ -54,6 +60,10 @@ Part of the [project meow](https://github.com/retran/meow) plugin family.
 | [nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter) | Symbol context in annotations |
 | [gitsigns.nvim](https://github.com/lewis6991/gitsigns.nvim) | Git hunk association |
 | [snacks.nvim](https://github.com/folke/snacks.nvim) | Enhanced picker UI (falls back to nui.menu) |
+| [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim) | Alternative picker UI |
+| [fzf-lua](https://github.com/ibhagwan/fzf-lua) | Alternative picker UI |
+| [avante.nvim](https://github.com/yetone/avante.nvim) | Auto-registered "avante" exporter |
+| [codecompanion.nvim](https://github.com/olimorris/codecompanion.nvim) | Auto-registered "codecompanion" exporter |
 
 ---
 
@@ -74,16 +84,23 @@ Part of the [project meow](https://github.com/retran/meow) plugin family.
         })
     end,
     keys = {
-        { "<leader>ra", "<Plug>(MeowReviewAdd)",    mode = { "n", "v" }, desc = "Add Review Comment" },
-        { "<leader>rd", "<Plug>(MeowReviewDelete)", mode = { "n", "v" }, desc = "Delete Review Comment" },
-        { "<leader>re", "<Plug>(MeowReviewEdit)",   desc = "Edit Review Comment" },
-        { "<leader>rv", "<Plug>(MeowReviewView)",   desc = "View Review Comment" },
-        { "<leader>rE", "<Plug>(MeowReviewExport)", desc = "Export Review" },
-        { "<leader>rc", "<Plug>(MeowReviewClear)",  desc = "Clear All Comments" },
-        { "<leader>rg", "<Plug>(MeowReviewGoto)",   desc = "Go to Review Comment" },
-        { "<leader>rr", "<Plug>(MeowReviewReload)", desc = "Reload Review" },
-        { "]r",         "<Plug>(MeowReviewNext)",   desc = "Next Review Comment" },
-        { "[r",         "<Plug>(MeowReviewPrev)",   desc = "Previous Review Comment" },
+        { "<leader>ra", "<Plug>(MeowReviewAdd)",           mode = { "n", "v" }, desc = "Add Review Comment" },
+        { "<leader>rd", "<Plug>(MeowReviewDelete)",        mode = { "n", "v" }, desc = "Delete Review Comment" },
+        { "<leader>re", "<Plug>(MeowReviewEdit)",          desc = "Edit Review Comment" },
+        { "<leader>rv", "<Plug>(MeowReviewView)",          desc = "View Review Comment" },
+        { "<leader>rE", "<Plug>(MeowReviewExport)",        desc = "Export Review" },
+        { "<leader>rX", "<Plug>(MeowReviewExportAndClear)", desc = "Export and Clear" },
+        { "<leader>rf", "<Plug>(MeowReviewExportFile)",    desc = "Export Current File" },
+        { "<leader>rc", "<Plug>(MeowReviewClear)",         desc = "Clear All Comments" },
+        { "<leader>rg", "<Plug>(MeowReviewGoto)",          desc = "Go to Review Comment" },
+        { "<leader>rG", "<Plug>(MeowReviewGotoFile)",      desc = "Go to Comment in File" },
+        { "<leader>rt", "<Plug>(MeowReviewGotoType)",      desc = "Go to Comment by Type" },
+        { "<leader>rR", "<Plug>(MeowReviewResolve)",       desc = "Resolve Comment" },
+        { "<leader>rA", "<Plug>(MeowReviewResolveAll)",    desc = "Resolve All Comments" },
+        { "<leader>rr", "<Plug>(MeowReviewReload)",        desc = "Reload Review" },
+        { "<leader>rV", "<Plug>(MeowReviewValidate)",      desc = "Validate Annotations" },
+        { "]r",         "<Plug>(MeowReviewNext)",          desc = "Next Review Comment" },
+        { "[r",         "<Plug>(MeowReviewPrev)",          desc = "Previous Review Comment" },
     },
 }
 ```
@@ -133,14 +150,33 @@ require("meow.review").setup({
     -- Set to 0 to disable snippet capture.
     context_lines = 3,
 
-    -- Built-in exporters to disable. Available: "file", "file_prompt", "clipboard".
+    -- Built-in exporters to disable.
+    -- Available: "file", "file_prompt", "clipboard", "avante" (when detected),
+    -- "codecompanion" (when detected).
     disabled_exporters = {},
 
     -- Default exporter used by :MeowReview export (no name given).
     default_exporter = "clipboard",
 
+    -- Default formatter. Built-ins: "markdown", "json".
+    default_formatter = "markdown",
+
     -- Filename written by the `file` and `file_prompt` exporters.
-    export_filename = ".meow-review.md",
+    export_filename = ".cache/meow-review/review.md",
+
+    -- Path to the annotation store JSON file.
+    store_path = ".cache/meow-review/annotations.json",
+
+    -- Modal popup dimensions.
+    modal_width = 64,
+    modal_height = 6,
+
+    -- Insert-mode key to cycle annotation type in the add/edit modal.
+    modal_cycle_key = "<C-t>",
+
+    -- Whether to add the store file to .gitignore.
+    -- "always": silently add. "prompt" (default): ask once. false: disable.
+    auto_gitignore = "prompt",
 
     -- Text inserted after the document heading in the exported Markdown.
     -- Instructs the AI agent to apply each annotation as a targeted, minimal fix.
@@ -149,6 +185,9 @@ require("meow.review").setup({
         .. "For each annotation, read the code snippet and comment carefully, "
         .. "then apply the requested fix directly to the file. "
         .. "Prefer minimal, targeted edits. Do not refactor unrelated code.",
+
+    -- Whether to inject a ## Summary block (file count, annotation count, file list).
+    export_summary = true,
 
     -- Custom annotation types. Replaces the built-in ISSUE / SUGGESTION / NOTE set.
     -- To keep a built-in type, include it explicitly in this table.

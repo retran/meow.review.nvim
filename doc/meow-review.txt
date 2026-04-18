@@ -1,4 +1,4 @@
-*meow-review.txt*	For Neovim >= 0.11.0	Last change: 2026 April 12
+*meow-review.txt*	For Neovim >= 0.11.0	Last change: 2026 April 18
 
 MEOW.REVIEW.NVIM					*meow.review* *meow-review*
 
@@ -54,10 +54,20 @@ KEY FEATURES					*meow-review-features*
 - *JSON persistence*: `.meow-review.json` at the project root; survives
   Neovim restarts.
 - *Pluggable export*: Register custom exporters; built-in `file`, `file_prompt`,
-  and `clipboard` targets included.
+  and `clipboard` targets included. Auto-registers avante.nvim and
+  codecompanion.nvim exporters when those plugins are detected.
+- *Formatter registry*: Built-in `markdown` and `json` formatters; register
+  custom formatters that transform annotations to any string format.
+- *Resolved state*: Mark individual or all annotations as resolved; resolved
+  annotations are excluded from export by default.
+- *Stale detection*: Validate annotations against the current file state;
+  stale annotations (file moved or lines deleted) are highlighted.
 - *Navigation*: Jump forward/backward between annotations across files.
+  Filter navigation by file or annotation type.
 - *Sign column*: Per-type signs track position drift as buffers are edited
   (extmarks).
+- *Statusline integration*: `require("meow.review").status()` returns a
+  short string suitable for lualine/heirline.
 - *`:checkhealth`*: `meow.review` health check reports dependency status,
   config, and exporters.
 
@@ -72,6 +82,10 @@ Optional:
 - `nvim-treesitter`  — enriches annotations with symbol context
 - `gitsigns.nvim`    — enables git hunk detection
 - `snacks.nvim`      — enhanced picker UI (falls back to nui.menu)
+- `telescope.nvim`   — alternative picker UI
+- `fzf-lua`          — alternative picker UI
+- `avante.nvim`      — auto-registered as "avante" exporter when detected
+- `codecompanion.nvim` — auto-registered as "codecompanion" exporter when detected
 
 ==============================================================================
 GETTING STARTED					*meow-review-getting-started*
@@ -91,14 +105,21 @@ lazy.nvim:
 	        })
 	    end,
 	    keys = {
-	        { "<leader>ra", "<Plug>(MeowReviewAdd)",    mode = { "n", "v" } },
-	        { "<leader>rd", "<Plug>(MeowReviewDelete)", mode = { "n", "v" } },
+	        { "<leader>ra", "<Plug>(MeowReviewAdd)",           mode = { "n", "v" } },
+	        { "<leader>rd", "<Plug>(MeowReviewDelete)",        mode = { "n", "v" } },
 	        { "<leader>re", "<Plug>(MeowReviewEdit)" },
 	        { "<leader>rv", "<Plug>(MeowReviewView)" },
 	        { "<leader>rE", "<Plug>(MeowReviewExport)" },
+	        { "<leader>rX", "<Plug>(MeowReviewExportAndClear)" },
+	        { "<leader>rf", "<Plug>(MeowReviewExportFile)" },
 	        { "<leader>rc", "<Plug>(MeowReviewClear)" },
 	        { "<leader>rg", "<Plug>(MeowReviewGoto)" },
+	        { "<leader>rG", "<Plug>(MeowReviewGotoFile)" },
+	        { "<leader>rt", "<Plug>(MeowReviewGotoType)" },
+	        { "<leader>rR", "<Plug>(MeowReviewResolve)" },
+	        { "<leader>rA", "<Plug>(MeowReviewResolveAll)" },
 	        { "<leader>rr", "<Plug>(MeowReviewReload)" },
+	        { "<leader>rV", "<Plug>(MeowReviewValidate)" },
 	        { "]r",         "<Plug>(MeowReviewNext)" },
 	        { "[r",         "<Plug>(MeowReviewPrev)" },
 	    },
@@ -144,18 +165,41 @@ Pass a configuration table to `setup()`. All keys are optional.
 	    -- Set to 0 to disable snippet capture entirely.
 	    context_lines = 3,
 
-	    -- Built-in exporters to disable. Available: "file", "file_prompt", "clipboard".
+	    -- Built-in exporters to disable. Available: "file", "file_prompt", "clipboard",
+	    -- "avante" (when avante.nvim detected), "codecompanion" (when detected).
 	    disabled_exporters = {},
 
 	    -- Default exporter used by :MeowReview export (no name given).
 	    default_exporter = "clipboard",
 
+	    -- Default formatter used when no formatter is specified.
+	    -- Built-ins: "markdown", "json". Register custom ones with register_formatter().
+	    default_formatter = "markdown",
+
 	    -- Filename written by the `file` and `file_prompt` exporters.
-	    export_filename = ".meow-review.md",
+	    export_filename = ".cache/meow-review/review.md",
+
+	    -- Path to the annotation store JSON file.
+	    store_path = ".cache/meow-review/annotations.json",
+
+	    -- Modal popup dimensions.
+	    modal_width = 64,
+	    modal_height = 6,
+
+	    -- Insert-mode key to cycle annotation type in the add/edit modal.
+	    modal_cycle_key = "<C-t>",
+
+	    -- Whether to add the store file to .gitignore.
+	    -- "always": silently add, "prompt": ask once (default), false: disable.
+	    auto_gitignore = "prompt",
 
 	    -- Text inserted after the document heading in the exported Markdown.
 	    -- Set to "" to omit the preamble entirely.
 	    prompt_preamble = "...",  -- default: see README
+
+	    -- Whether to inject a ## Summary block after the preamble.
+	    -- Includes file count, annotation count, type breakdown, file list.
+	    export_summary = true,
 
 	    -- Custom annotation types. Replaces or extends the built-in
 	    -- ISSUE / SUGGESTION / NOTE set. Keys become the type names used
@@ -241,12 +285,26 @@ Example Lua keymaps:
 	    { desc = "View Review Comment" })
 	vim.keymap.set("n", "<leader>rE", "<Plug>(MeowReviewExport)",
 	    { desc = "Export Review" })
+	vim.keymap.set("n", "<leader>rX", "<Plug>(MeowReviewExportAndClear)",
+	    { desc = "Export Review and Clear" })
+	vim.keymap.set("n", "<leader>rf", "<Plug>(MeowReviewExportFile)",
+	    { desc = "Export Review for Current File" })
 	vim.keymap.set("n", "<leader>rc", "<Plug>(MeowReviewClear)",
 	    { desc = "Clear All Comments" })
 	vim.keymap.set("n", "<leader>rg", "<Plug>(MeowReviewGoto)",
 	    { desc = "Go to Review Comment" })
+	vim.keymap.set("n", "<leader>rG", "<Plug>(MeowReviewGotoFile)",
+	    { desc = "Go to Review Comment in Current File" })
+	vim.keymap.set("n", "<leader>rt", "<Plug>(MeowReviewGotoType)",
+	    { desc = "Go to Review Comment by Type" })
+	vim.keymap.set("n", "<leader>rR", "<Plug>(MeowReviewResolve)",
+	    { desc = "Resolve Comment at Cursor" })
+	vim.keymap.set("n", "<leader>rA", "<Plug>(MeowReviewResolveAll)",
+	    { desc = "Resolve All Comments" })
 	vim.keymap.set("n", "<leader>rr", "<Plug>(MeowReviewReload)",
 	    { desc = "Reload Review" })
+	vim.keymap.set("n", "<leader>rV", "<Plug>(MeowReviewValidate)",
+	    { desc = "Validate Annotations" })
 	vim.keymap.set("n", "]r", "<Plug>(MeowReviewNext)",
 	    { desc = "Next Review Comment" })
 	vim.keymap.set("n", "[r", "<Plug>(MeowReviewPrev)",
@@ -264,16 +322,23 @@ COMMANDS					*meow-review-commands*
 :MeowReview {subcommand} [args]				*:MeowReview*
 
 	{subcommand}:
-	- `add`           — add annotation at cursor / visual selection
-	- `delete`        — delete annotation at cursor
-	- `edit`          — edit annotation at cursor
-	- `view`          — view annotation popup at cursor
-	- `export [name]` — run the default exporter, or a named one
-	- `clear`         — clear all annotations (with confirmation)
-	- `goto`          — open picker; selecting an annotation jumps to it
-	- `reload`        — reload from `.meow-review.json`
-	- `next`          — jump to next annotation
-	- `prev`          — jump to previous annotation
+	- `add`                  — add annotation at cursor / visual selection
+	- `delete`               — delete annotation at cursor
+	- `edit`                 — edit annotation at cursor
+	- `view`                 — view annotation popup at cursor
+	- `export [name]`        — run the default exporter, or a named one
+	- `export_and_clear [n]` — export then clear the store on success
+	- `export_file [name]`   — export only the current buffer's file
+	- `clear`                — clear all annotations (with confirmation)
+	- `goto`                 — open picker; selecting an annotation jumps to it
+	- `goto_file`            — picker filtered to current file
+	- `goto_type [type]`     — picker filtered to annotation type
+	- `resolve`              — resolve annotation at cursor
+	- `resolve_all`          — resolve all annotations (with confirmation)
+	- `validate`             — validate all annotations against current files
+	- `reload`               — reload from annotation store JSON
+	- `next`                 — jump to next annotation
+	- `prev`                 — jump to previous annotation
 
 Tab completion is available for all subcommand names and exporter names.
 
@@ -311,6 +376,10 @@ The export system is pluggable. Three built-in exporters are registered by
 *file*		Writes to the configured `export_filename` in the project root.
 *file_prompt*	Prompts for a filename (pre-filled with `export_filename`),
 		then writes to the project root.
+*avante*	(auto-registered when avante.nvim is detected) Sends the
+		Markdown to avante.nvim via `avante.api.ask()`.
+*codecompanion*	(auto-registered when codecompanion.nvim is detected) Sends
+		the Markdown to codecompanion.nvim via `codecompanion.chat()`.
 
 Run the default exporter (`clipboard` unless overridden via `default_exporter`):
 >
@@ -319,8 +388,16 @@ Run the default exporter (`clipboard` unless overridden via `default_exporter`):
 Run a specific exporter by name:
 >
 	:MeowReview export file
-	:MeowReview export file_prompt
-	:MeowReview export clipboard
+	:MeowReview export avante
+	:MeowReview export codecompanion
+<
+Export and immediately clear the store:
+>
+	:MeowReview export_and_clear
+<
+Export only the annotations for the current file:
+>
+	:MeowReview export_file
 <
 
 The Markdown format is structured for AI agent consumption:
@@ -328,6 +405,10 @@ The Markdown format is structured for AI agent consumption:
   # Code Review — YYYY-MM-DD
 
   The following annotations were left during a code review. ...
+
+  ## Summary
+  Files reviewed: 2  |  Annotations: 4 (3 ISSUE, 1 NOTE)
+  Files: src/foo.lua, src/bar.lua
 
   ## @path/to/file.lua
 
@@ -348,15 +429,18 @@ Each file gets a `## @file` section. Each annotation heading is
 Fenced code blocks include line numbers and a language hint from the
 file extension.
 
+The optional `## Summary` section (enabled by `export_summary = true`) gives
+the AI agent an at-a-glance overview of scope before the details.
+
 ==============================================================================
 CUSTOM EXPORTERS				*meow-review-exporters*
 
 Register a custom exporter anywhere after `setup()`. The function receives
-the rendered Markdown string and the project root path.
+the rendered string (from the active formatter) and the project root path.
 >
 	---@type meow.review.ExporterFn
-	local function my_exporter(markdown, root)
-	    -- do something with markdown / root
+	local function my_exporter(content, root)
+	    -- do something with content / root
 	end
 
 	require("meow.review").register_exporter("my_exporter", my_exporter)
@@ -370,6 +454,44 @@ Disable a built-in exporter via config:
 Unregister at runtime:
 >
 	require("meow.review").unregister_exporter("clipboard")
+<
+
+------------------------------------------------------------------------------
+CUSTOM FORMATTERS				*meow-review-formatters*
+
+A formatter transforms the sorted annotation list into a string.
+Built-in formatters: `"markdown"` (default) and `"json"`.
+>
+	require("meow.review").register_formatter("xml", function(annotations)
+	    local parts = { "<review>" }
+	    for _, ann in ipairs(annotations) do
+	        table.insert(parts, string.format(
+	            '  <annotation file="%s" line="%d" type="%s">%s</annotation>',
+	            ann.file, ann.lnum, ann.type, ann.text
+	        ))
+	    end
+	    table.insert(parts, "</review>")
+	    return table.concat(parts, "\n")
+	end)
+
+	-- Export using the custom formatter:
+	:MeowReview export clipboard xml
+<
+
+Example: avante.nvim integration ~
+
+Avante is auto-registered when detected. To invoke manually:
+>
+	:MeowReview export avante
+<
+Or call from Lua:
+>
+	require("meow.review").export_review("avante")
+<
+
+Example: codecompanion.nvim integration ~
+>
+	:MeowReview export codecompanion
 <
 
 Example: zellij + opencode integration ~
@@ -418,10 +540,21 @@ review.setup({opts})
 	                                   (default: {})
 	  `default_exporter`       string    Exporter used by bare `:MeowReview export`
 	                                   (default: "clipboard")
+	  `default_formatter`      string    Formatter used when none specified
+	                                   (default: "markdown")
 	  `export_filename`        string    Filename for `file` / `file_prompt` exporters
-	                                   (default: ".meow-review.md")
+	                                   (default: ".cache/meow-review/review.md")
+	  `store_path`             string    Path to annotation store JSON
+	                                   (default: ".cache/meow-review/annotations.json")
+	  `modal_width`            number    Modal popup width in columns (default: 64)
+	  `modal_height`           number    Modal popup height in lines (default: 6)
+	  `modal_cycle_key`        string    Key to cycle annotation type in modal
+	                                   (default: "<C-t>")
+	  `auto_gitignore`         string|boolean  "always"|"prompt"|false
+	                                   (default: "prompt")
 	  `prompt_preamble`        string    Preamble text in exported Markdown
 	                                   (see |meow-review-configuration|)
+	  `export_summary`         boolean   Include ## Summary block (default: true)
 	  `annotation_types`       table     Custom annotation type definitions
 	                                   (see |meow-review-annotation-types|)
 	  `annotation_type_order`  string[]  Tab-cycling order for the add modal
@@ -453,12 +586,34 @@ review.export_review([{name}])
 	Export annotations using a named exporter. When {name} is given, runs
 	that exporter. When {name} is nil, runs the configured `default_exporter`
 	("clipboard" by default).
-	Built-in names: "file", "file_prompt", "clipboard".
+	Built-in names: "file", "file_prompt", "clipboard", "avante"
+	(when detected), "codecompanion" (when detected).
+
+						*meow.review.export_and_clear()*
+review.export_and_clear([{name}])
+	Export all annotations using the named (or default) exporter, then clear
+	the store if the export succeeds. If export fails, the store is untouched.
+
+						*meow.review.export_current_file()*
+review.export_current_file([{name}])
+	Export only annotations for the current buffer's file using the named
+	(or default) exporter.
+
+						*meow.review.register_formatter()*
+review.register_formatter({name}, {fn})
+	Register a custom formatter. {fn} has signature:
+	  fun(annotations: meow.review.Annotation[]): string
+	Replaces any formatter previously registered under the same name.
+	Built-in names: "markdown", "json".
+
+						*meow.review.unregister_formatter()*
+review.unregister_formatter({name})
+	Remove a registered formatter by name.
 
 						*meow.review.register_exporter()*
 review.register_exporter({name}, {fn})
 	Register a custom exporter. {fn} has signature:
-	  fun(markdown: string, root: string)
+	  fun(content: string, root: string)
 	Replaces any exporter previously registered under the same name.
 	See |meow-review-exporters| for examples.
 
@@ -466,19 +621,70 @@ review.register_exporter({name}, {fn})
 review.unregister_exporter({name})
 	Remove a registered exporter by name (built-in or custom).
 
+						*meow.review.resolve_comment()*
+review.resolve_comment()
+	Mark the annotation at the cursor position as resolved. Resolved
+	annotations are excluded from `sorted()` and export by default.
+	Emits a warning if no annotation is found at the cursor.
+
+						*meow.review.resolve_all_comments()*
+review.resolve_all_comments()
+	Prompt to resolve all annotations. Uses `vim.ui.select` to confirm.
+
+						*meow.review.validate()*
+review.validate()
+	Validate all annotations against current file state. Annotations whose
+	file no longer exists, or whose line number exceeds the file length, or
+	whose snippet no longer matches, are highlighted with `MeowReviewStale`.
+	Returns the number of stale annotations found.
+
+						*meow.review.status()*
+review.status()
+	Return a short status string suitable for statusline integration.
+	Returns "" when there are no annotations.
+	Example output: " 5 (3 ISSUE, 2 NOTE)"
+
+	Statusline integration examples ~
+
+	lualine:
+>
+	    {
+	        function() return require("meow.review").status() end,
+	        cond = function()
+	            return require("meow.review").status() ~= ""
+	        end,
+	    }
+<
+	heirline:
+>
+	    {
+	        provider = function()
+	            return require("meow.review").status()
+	        end,
+	    }
+<
+
 						*meow.review.clear_all()*
 review.clear_all()
-	Prompt to clear all annotations. Uses `vim.ui.input` — type `yes` to
-	confirm.
+	Prompt to clear all annotations. Uses `vim.ui.select` to confirm.
 
 						*meow.review.goto_comment()*
 review.goto_comment()
 	Open a picker listing all annotations. Selecting one jumps to its
 	location, opening the file if needed.
 
+						*meow.review.goto_comment_in_file()*
+review.goto_comment_in_file()
+	Open a picker filtered to annotations in the current buffer's file.
+
+						*meow.review.goto_comment_by_type()*
+review.goto_comment_by_type([{type_name}])
+	Open a picker filtered to annotations of the given type. When
+	{type_name} is nil, first prompts to select a type.
+
 						*meow.review.reload()*
 review.reload()
-	Reload annotations from `.meow-review.json` and re-render signs.
+	Reload annotations from the store JSON and re-render signs.
 
 						*meow.review.next_comment()*
 review.next_comment()
