@@ -40,6 +40,12 @@ local default_config = {
     export_filename = ".meow-review.md",
     ---@type string
     store_path = ".cache/meow-review/annotations.json",
+    ---@type number
+    modal_width = 64,
+    ---@type number
+    modal_height = 6,
+    ---@type string
+    modal_cycle_key = "<C-t>",
     ---@type string
     prompt_preamble = "The following annotations were left during a code review. "
         .. "For each annotation, read the code snippet and comment carefully, then apply the requested fix directly to the file. "
@@ -56,6 +62,9 @@ function M.validate(cfg)
         default_exporter = { cfg.default_exporter, "string" },
         export_filename = { cfg.export_filename, "string" },
         store_path = { cfg.store_path, "string" },
+        modal_width = { cfg.modal_width, "number" },
+        modal_height = { cfg.modal_height, "number" },
+        modal_cycle_key = { cfg.modal_cycle_key, "string" },
         prompt_preamble = { cfg.prompt_preamble, "string" },
     })
     if not ok then

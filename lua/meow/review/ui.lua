@@ -85,9 +85,14 @@ local function open_modal(modal_opts)
     local types = get_types()
     local current_type = modal_opts.initial_type or types.order[1]
 
+    local cfg = require("meow.review.config.internal").get()
+    local modal_width = cfg.modal_width or 64
+    local modal_height = cfg.modal_height or 6
+    local cycle_key = cfg.modal_cycle_key or "<C-t>"
+
     local popup = Popup({
         position = "50%",
-        size = { width = 64, height = 6 },
+        size = { width = modal_width, height = modal_height },
         enter = true,
         focusable = true,
         border = {
@@ -95,7 +100,7 @@ local function open_modal(modal_opts)
             text = {
                 top = modal_opts.top_label or " Review Comment ",
                 top_align = "center",
-                bottom = render_type_line(current_type) .. "  [<C-s>] Save  [<Tab>] Type  [<C-c>] Cancel ",
+                bottom = render_type_line(current_type) .. "  [<C-s>] Save  [" .. cycle_key .. "] Type  [<C-c>] Cancel ",
                 bottom_align = "left",
             },
         },
@@ -147,11 +152,11 @@ local function open_modal(modal_opts)
     popup:map("n", "<C-s>", confirm, { noremap = true })
     popup:map("n", "<CR>", confirm, { noremap = true })
 
-    popup:map("i", "<Tab>", function()
+    popup:map("i", cycle_key, function()
         current_type = types.next(current_type)
         popup.border:set_text(
             "bottom",
-            render_type_line(current_type) .. "  [<C-s>] Save  [<Tab>] Type  [<C-c>] Cancel "
+            render_type_line(current_type) .. "  [<C-s>] Save  [" .. cycle_key .. "] Type  [<C-c>] Cancel "
         )
     end, { noremap = true })
 

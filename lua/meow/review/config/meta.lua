@@ -54,6 +54,9 @@
 ---@field default_exporter? string Exporter to run when no name is given to `:MeowReview export` (default "clipboard").
 ---@field export_filename? string Filename written by the `file` and `file_prompt` exporters (default ".meow-review.md").
 ---@field store_path? string Path to the annotation store JSON file. Relative paths are resolved against the project root; absolute paths are used as-is. Parent directories are created automatically. Default: ".cache/meow-review/annotations.json".
+---@field modal_width? number Width (in columns) of the add/edit comment modal. Default: 64.
+---@field modal_height? number Height (in lines) of the add/edit comment modal. Default: 6.
+---@field modal_cycle_key? string Insert-mode key used to cycle the annotation type in the add/edit modal. Default: "<C-t>". Change if it conflicts with your mappings.
 ---@field annotation_types? table<string, meow.review.AnnotationType> Custom annotation type definitions. Replaces the default set (ISSUE, SUGGESTION, NOTE) when provided.
 ---@field annotation_type_order? string[] Tab-cycling order for the add-modal. Defaults to sorted keys of annotation_types.
 ---@field prompt_preamble? string Text inserted after the document heading in the exported Markdown. Defaults to an instruction that asks the AI agent to apply each annotation as a targeted fix. Set to "" to omit it.

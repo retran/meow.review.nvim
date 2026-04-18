@@ -21,6 +21,9 @@ describe("meow.review.config.internal", function()
             assert.equal(".meow-review.md", cfg.export_filename)
             assert.equal(".cache/meow-review/annotations.json", cfg.store_path)
             assert.same({}, cfg.disabled_exporters)
+            assert.equal(64, cfg.modal_width)
+            assert.equal(6, cfg.modal_height)
+            assert.equal("<C-t>", cfg.modal_cycle_key)
         end)
 
         it("merges user config over defaults", function()
@@ -59,6 +62,9 @@ describe("meow.review.config.internal", function()
                 default_exporter = "clipboard",
                 export_filename = ".md",
                 store_path = "path",
+                modal_width = 64,
+                modal_height = 6,
+                modal_cycle_key = "<C-t>",
                 prompt_preamble = "text",
             })
             assert.is_true(ok)
@@ -72,6 +78,25 @@ describe("meow.review.config.internal", function()
                 default_exporter = "clipboard",
                 export_filename = ".md",
                 store_path = "path",
+                modal_width = 64,
+                modal_height = 6,
+                modal_cycle_key = "<C-t>",
+                prompt_preamble = "text",
+            })
+            assert.is_false(ok)
+            assert.is_string(err)
+        end)
+
+        it("returns false for wrong type on modal_width", function()
+            local ok, err = config.validate({
+                context_lines = 3,
+                disabled_exporters = {},
+                default_exporter = "clipboard",
+                export_filename = ".md",
+                store_path = "path",
+                modal_width = "wide",
+                modal_height = 6,
+                modal_cycle_key = "<C-t>",
                 prompt_preamble = "text",
             })
             assert.is_false(ok)
