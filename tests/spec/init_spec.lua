@@ -57,6 +57,9 @@ describe("meow.review.init", function()
             get_store_path = function()
                 return "/tmp/test-root/.cache/meow-review/annotations.json"
             end,
+            get_project_root = function()
+                return "/tmp/test-root"
+            end,
         }
 
         stub_signs = {
@@ -186,6 +189,18 @@ describe("meow.review.init", function()
             local s = m.status()
             assert.truthy(s:find("2"), "expected 2 in status, got: " .. s)
             assert.falsy(s:find("%("), "expected no breakdown when single type, got: " .. s)
+        end)
+    end)
+
+    describe("BufEnter autocmd (debounce)", function()
+        it("registers a MeowReviewBufEnter augroup after setup is called", function()
+            -- setup() is called lazily on first API use; we trigger it by calling any API
+            -- Actually init.lua registers autocmds during setup(). Verify the augroup exists.
+            -- We call setup() directly here.
+            stub_store._annotations = {}
+            m.setup()
+            local groups = vim.api.nvim_get_autocmds({ group = "MeowReviewBufEnter" })
+            assert.truthy(#groups > 0, "expected MeowReviewBufEnter autocmd to be registered")
         end)
     end)
 end)

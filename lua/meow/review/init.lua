@@ -98,20 +98,30 @@ function M.setup(opts)
     s.set_project_root(root)
     s.load(root)
 
-    -- Re-render signs when entering a buffer that has annotations
+    -- Re-render signs when entering a buffer that has annotations.
+    -- Debounced 50 ms to avoid redundant work on rapid buffer switches.
+    local _bufenter_timer = nil
     vim.api.nvim_create_autocmd("BufEnter", {
         group = vim.api.nvim_create_augroup("MeowReviewBufEnter", { clear = true }),
         callback = function()
-            local bufnr = vim.api.nvim_get_current_buf()
-            local abs = vim.api.nvim_buf_get_name(bufnr)
-            if abs == "" then return end
-            local st = store()
-            local r = st.current_root()
-            local rel = abs:gsub("^" .. vim.pesc(r) .. "/", "")
-            if rel == abs then rel = vim.fn.fnamemodify(abs, ":.") end
-            if st.has_file(rel) then
-                signs().render_buffer(bufnr)
+            if _bufenter_timer then
+                _bufenter_timer:stop()
+                _bufenter_timer:close()
+                _bufenter_timer = nil
             end
+            local bufnr = vim.api.nvim_get_current_buf()
+            _bufenter_timer = vim.defer_fn(function()
+                _bufenter_timer = nil
+                local abs = vim.api.nvim_buf_get_name(bufnr)
+                if abs == "" then return end
+                local st = store()
+                local r = st.current_root()
+                local rel = abs:gsub("^" .. vim.pesc(r) .. "/", "")
+                if rel == abs then rel = vim.fn.fnamemodify(abs, ":.") end
+                if st.has_file(rel) then
+                    signs().render_buffer(bufnr)
+                end
+            end, 50)
         end,
     })
 
