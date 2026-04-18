@@ -20,6 +20,9 @@ Thumbs.db
 test-results/
 coverage/
 
+# Test dependency clones (auto-bootstrapped by scripts/minimal_init.lua)
+deps/
+
 # Temp
 *.tmp
 *.bak
