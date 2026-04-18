@@ -500,4 +500,14 @@ function M.status()
     return "  " .. n .. detail
 end
 
+--- Run stale annotation detection and notify the user.
+--- Stale annotations (file missing or line out of range) are highlighted with
+--- the MeowReviewStale sign group. Returns the number of stale annotations found.
+---@return number
+function M.validate()
+    local s = store()
+    local root = s.current_root()
+    return require("meow.review.validate").run(s.all(), root)
+end
+
 return M

@@ -107,6 +107,11 @@ local subcommand_tbl = {
             require("meow.review").reload()
         end,
     },
+    validate = {
+        impl = function(_, _)
+            require("meow.review").validate()
+        end,
+    },
     next = {
         impl = function(_, _)
             require("meow.review").next_comment()
@@ -126,7 +131,7 @@ local function meow_review_cmd(opts)
 
     if not subcommand_key or subcommand_key == "" then
         vim.notify(
-            "Usage: :MeowReview <add|delete|edit|view|export [name]|clear|goto|reload|next|prev>",
+            "Usage: :MeowReview <add|delete|edit|view|export [name]|clear|goto|reload|validate|next|prev>",
             vim.log.levels.ERROR
         )
         return
@@ -222,3 +227,4 @@ end, { desc = "Go to previous review comment" })
 vim.api.nvim_set_hl(0, "MeowReviewIssue", { link = "DiagnosticError", default = true })
 vim.api.nvim_set_hl(0, "MeowReviewSuggestion", { link = "DiagnosticWarn", default = true })
 vim.api.nvim_set_hl(0, "MeowReviewNote", { link = "DiagnosticInfo", default = true })
+vim.api.nvim_set_hl(0, "MeowReviewStale", { link = "DiagnosticHint", default = true })
