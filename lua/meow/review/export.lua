@@ -214,12 +214,14 @@ end
 
 -- ── Built-in exporters ────────────────────────────────────────────────────────
 
---- Write markdown to {root}/{filename}, notifying on success or failure.
+--- Write markdown to a resolved path, notifying on success or failure.
 ---@param markdown string
 ---@param root string
----@param filename string
+---@param filename string  Relative or absolute path for the output file.
 local function write_to_file(markdown, root, filename)
-    local path = root .. "/" .. filename
+    local utils = require("meow.review.utils")
+    local path = utils.resolve_path(filename, root)
+    utils.ensure_parent_dirs(path)
     local f = io.open(path, "w")
     if not f then
         vim.notify("MeowReview: Cannot write " .. path, vim.log.levels.ERROR)
@@ -235,7 +237,7 @@ end
 ---@param root string
 local function export_to_file(markdown, root)
     local ok, cfg = pcall(require, "meow.review.config.internal")
-    local filename = ok and cfg.get().export_filename or ".meow-review.md"
+    local filename = ok and cfg.get().export_filename or ".cache/meow-review/review.md"
     write_to_file(markdown, root, filename)
 end
 
@@ -244,7 +246,7 @@ end
 ---@param root string
 local function export_to_file_prompt(markdown, root)
     local ok, cfg = pcall(require, "meow.review.config.internal")
-    local default = ok and cfg.get().export_filename or ".meow-review.md"
+    local default = ok and cfg.get().export_filename or ".cache/meow-review/review.md"
     vim.ui.input({ prompt = "Export filename: ", default = default }, function(input)
         if not input or input == "" then
             vim.notify("MeowReview: Export cancelled.", vim.log.levels.INFO)

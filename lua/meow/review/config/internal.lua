@@ -37,7 +37,7 @@ local default_config = {
     ---@type string
     default_exporter = "clipboard",
     ---@type string
-    export_filename = ".meow-review.md",
+    export_filename = ".cache/meow-review/review.md",
     ---@type string
     store_path = ".cache/meow-review/annotations.json",
     ---@type number

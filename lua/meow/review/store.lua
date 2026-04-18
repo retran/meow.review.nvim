@@ -107,12 +107,8 @@ local VERSION = 1
 ---@return string
 local function resolve_store_path(root)
     local cfg = require("meow.review.config.internal").get()
-    local p = cfg.store_path
-    if vim.fn.fnamemodify(p, ":p") == p then
-        -- Already absolute
-        return p
-    end
-    return root .. "/" .. p
+    local utils = require("meow.review.utils")
+    return utils.resolve_path(cfg.store_path, root)
 end
 
 --- Return the absolute path to the annotation store file for the given
@@ -126,10 +122,7 @@ end
 --- Ensure all parent directories of `path` exist.
 ---@param path string
 local function ensure_parent_dirs(path)
-    local dir = vim.fn.fnamemodify(path, ":h")
-    if vim.fn.isdirectory(dir) == 0 then
-        vim.fn.mkdir(dir, "p")
-    end
+    require("meow.review.utils").ensure_parent_dirs(path)
 end
 
 -- Fields that are serialised to disk (runtime tracking fields excluded).

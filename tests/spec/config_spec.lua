@@ -18,14 +18,13 @@ describe("meow.review.config.internal", function()
             local cfg = config.get()
             assert.equal(3, cfg.context_lines)
             assert.equal("clipboard", cfg.default_exporter)
-            assert.equal(".meow-review.md", cfg.export_filename)
+            assert.equal(".cache/meow-review/review.md", cfg.export_filename)
             assert.equal(".cache/meow-review/annotations.json", cfg.store_path)
             assert.same({}, cfg.disabled_exporters)
             assert.equal(64, cfg.modal_width)
             assert.equal(6, cfg.modal_height)
             assert.equal("<C-t>", cfg.modal_cycle_key)
         end)
-
         it("merges user config over defaults", function()
             vim.g.meow_review = { context_lines = 5, default_exporter = "file" }
             package.loaded["meow.review.config.internal"] = nil
@@ -33,7 +32,7 @@ describe("meow.review.config.internal", function()
             assert.equal(5, cfg.context_lines)
             assert.equal("file", cfg.default_exporter)
             -- untouched defaults survive
-            assert.equal(".meow-review.md", cfg.export_filename)
+            assert.equal(".cache/meow-review/review.md", cfg.export_filename)
         end)
 
         it("supports a callable vim.g.meow_review", function()
