@@ -46,6 +46,8 @@ local default_config = {
     modal_height = 6,
     ---@type string
     modal_cycle_key = "<C-t>",
+    ---@type string|boolean
+    auto_gitignore = "prompt",
     ---@type string
     prompt_preamble = "The following annotations were left during a code review. "
         .. "For each annotation, read the code snippet and comment carefully, then apply the requested fix directly to the file. "
@@ -71,6 +73,13 @@ function M.validate(cfg)
         -- Prefix with the config table path so users know exactly what is wrong
         return false, "vim.g.meow_review." .. (err or "unknown error")
     end
+
+    -- Validate auto_gitignore separately (accepts string or boolean)
+    local ag = cfg.auto_gitignore
+    if ag ~= nil and type(ag) ~= "string" and type(ag) ~= "boolean" then
+        return false, "vim.g.meow_review.auto_gitignore: expected string or boolean, got " .. type(ag)
+    end
+
     return true, nil
 end
 

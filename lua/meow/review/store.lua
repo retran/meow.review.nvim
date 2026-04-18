@@ -150,6 +150,91 @@ local function annotation_to_json(ann)
     return t
 end
 
+-- ── Gitignore management ──────────────────────────────────────────────────────
+
+--- Check if the given pattern is already in the given .gitignore file.
+---@param gitignore_path string absolute path to the .gitignore file
+---@param pattern string gitignore pattern to look for
+---@return boolean
+local function is_in_gitignore(gitignore_path, pattern)
+    local f = io.open(gitignore_path, "r")
+    if not f then
+        return false
+    end
+    for line in f:lines() do
+        if vim.trim(line) == pattern then
+            f:close()
+            return true
+        end
+    end
+    f:close()
+    return false
+end
+
+--- Append a pattern to the .gitignore in the given root.
+---@param root string project root
+---@param pattern string gitignore pattern to append
+local function append_to_gitignore(root, pattern)
+    local gitignore_path = root .. "/.gitignore"
+    local f = io.open(gitignore_path, "a")
+    if not f then
+        vim.notify("MeowReview: Cannot write .gitignore at " .. gitignore_path, vim.log.levels.WARN)
+        return
+    end
+    f:write("\n# meow.review annotation store\n" .. pattern .. "\n")
+    f:close()
+    vim.notify("MeowReview: Added '" .. pattern .. "' to .gitignore", vim.log.levels.INFO)
+end
+
+--- Derive the shortest gitignore pattern for a store path relative to a root.
+---@param store_path string absolute path to the store file
+---@param root string absolute project root
+---@return string
+local function gitignore_pattern(store_path, root)
+    local rel = store_path:gsub("^" .. vim.pesc(root) .. "/", "")
+    if rel ~= store_path then
+        -- relative — prefix with / to anchor to root
+        return "/" .. rel
+    end
+    -- outside root: use the basename as best effort
+    return "/" .. vim.fn.fnamemodify(store_path, ":t")
+end
+
+--- Handle auto-gitignore logic after saving.
+---@param root string
+---@param path string absolute store path
+local function handle_auto_gitignore(root, path)
+    local cfg = require("meow.review.config.internal").get()
+    local setting = cfg.auto_gitignore
+
+    if setting == false then
+        return
+    end
+
+    local gitignore_path = root .. "/.gitignore"
+    local pattern = gitignore_pattern(path, root)
+
+    if is_in_gitignore(gitignore_path, pattern) then
+        return -- already ignored
+    end
+
+    if setting == "always" then
+        append_to_gitignore(root, pattern)
+    elseif setting == "prompt" then
+        vim.ui.select(
+            { "Add to .gitignore (recommended)", "Dismiss" },
+            { prompt = "MeowReview: annotation store is not in .gitignore:" },
+            function(choice)
+                if choice and choice:find("Add") then
+                    append_to_gitignore(root, pattern)
+                end
+            end
+        )
+    end
+end
+
+-- ── Persistence helpers ───────────────────────────────────────────────────────
+
 --- Sync open-buffer extmark positions back into annotation lnums before saving.
 local function sync_extmark_positions()
     local ns = require("meow.review.signs").NS
@@ -189,6 +274,11 @@ function M.save()
     end
     f:write(json)
     f:close()
+
+    -- After a successful write, handle gitignore (non-blocking if prompt)
+    vim.schedule(function()
+        handle_auto_gitignore(root, path)
+    end)
 end
 
 --- Load annotations from the configured store path in the given (or current) root.
@@ -234,8 +324,6 @@ function M.load(root)
         get_signs().render_all()
     end)
 end
-
--- ── ID generation ─────────────────────────────────────────────────────────────
 
 --- Generate a collision-resistant unique ID.
 --- Uses `vim.uv.hrtime()` (nanosecond monotonic clock) combined with a random
