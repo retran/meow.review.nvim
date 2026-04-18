@@ -28,7 +28,9 @@ describe("meow.review.init", function()
             _annotations = {},
             count = function()
                 local n = 0
-                for _ in pairs(stub_store._annotations) do n = n + 1 end
+                for _ in pairs(stub_store._annotations) do
+                    n = n + 1
+                end
                 return n
             end,
             clear = function()
@@ -156,7 +158,9 @@ describe("meow.review.init", function()
             local notified = false
             local orig = vim.notify
             vim.notify = function(msg, _)
-                if msg:find("No annotations") then notified = true end
+                if msg:find("No annotations") then
+                    notified = true
+                end
             end
             m.clear_all()
             vim.notify = orig
@@ -244,7 +248,9 @@ describe("meow.review.init", function()
             local notified = false
             local orig = vim.notify
             vim.notify = function(msg, _)
-                if msg:find("No annotations") then notified = true end
+                if msg:find("No annotations") then
+                    notified = true
+                end
             end
             -- current_file returns "current.lua" but store is empty
             m.goto_comment_in_file()
@@ -270,7 +276,9 @@ describe("meow.review.init", function()
             local notified = false
             local orig = vim.notify
             vim.notify = function(msg, _)
-                if msg:find("No annotations") then notified = true end
+                if msg:find("No annotations") then
+                    notified = true
+                end
             end
             m.goto_comment_by_type("ISSUE")
             vim.notify = orig
@@ -303,8 +311,12 @@ describe("meow.review.init", function()
 
         before_each(function()
             notify_calls = {}
-            vim.notify = function(msg, _) table.insert(notify_calls, msg) end
-            vim.api.nvim_win_get_cursor = function() return { 1, 0 } end
+            vim.notify = function(msg, _)
+                table.insert(notify_calls, msg)
+            end
+            vim.api.nvim_win_get_cursor = function()
+                return { 1, 0 }
+            end
         end)
 
         it("warns when no annotation at cursor", function()
@@ -328,7 +340,9 @@ describe("meow.review.init", function()
 
         before_each(function()
             notify_calls = {}
-            vim.notify = function(msg, _) table.insert(notify_calls, msg) end
+            vim.notify = function(msg, _)
+                table.insert(notify_calls, msg)
+            end
         end)
 
         it("notifies when no annotations exist", function()
@@ -337,10 +351,12 @@ describe("meow.review.init", function()
         end)
 
         it("resolves all annotations when confirmed", function()
-            stub_store.add({ file = "a.lua", lnum = 1, end_lnum = 1, type = "ISSUE",      text = "x" })
+            stub_store.add({ file = "a.lua", lnum = 1, end_lnum = 1, type = "ISSUE", text = "x" })
             stub_store.add({ file = "b.lua", lnum = 2, end_lnum = 2, type = "SUGGESTION", text = "y" })
             -- Simulate user selecting "Yes, resolve all"
-            vim.ui.select = function(_, _, cb) cb("Yes, resolve all") end
+            vim.ui.select = function(_, _, cb)
+                cb("Yes, resolve all")
+            end
             m.resolve_all_comments()
             for _, ann in pairs(stub_store._annotations) do
                 assert.is_true(ann.resolved)
@@ -354,7 +370,9 @@ describe("meow.review.init", function()
         it("clears store after successful export", function()
             stub_store.add({ file = "a.lua", lnum = 1, end_lnum = 1, type = "ISSUE", text = "x" })
             -- Make the export stub return true (success)
-            package.loaded["meow.review.export"].export = function() return true end
+            package.loaded["meow.review.export"].export = function()
+                return true
+            end
             package.loaded["meow.review.init"] = nil
             m = require("meow.review.init")
             m.export_and_clear()
@@ -364,7 +382,9 @@ describe("meow.review.init", function()
         it("does NOT clear store when export fails", function()
             stub_store.add({ file = "a.lua", lnum = 1, end_lnum = 1, type = "ISSUE", text = "x" })
             -- Make the export stub return false (failure)
-            package.loaded["meow.review.export"].export = function() return false end
+            package.loaded["meow.review.export"].export = function()
+                return false
+            end
             package.loaded["meow.review.init"] = nil
             m = require("meow.review.init")
             m.export_and_clear()

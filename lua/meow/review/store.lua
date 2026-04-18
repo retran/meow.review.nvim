@@ -316,7 +316,9 @@ function M.load(root)
         if ann.id and ann.file and ann.lnum and ann.type and ann.text then
             ann.extmark_id = nil
             ann.bufnr = nil
-            if ann.resolved == nil then ann.resolved = false end
+            if ann.resolved == nil then
+                ann.resolved = false
+            end
             table.insert(state.annotations, ann)
         end
     end
@@ -344,7 +346,9 @@ end
 function M.add(annotation)
     annotation.id = make_id()
     annotation.timestamp = annotation.timestamp or os.time()
-    if annotation.resolved == nil then annotation.resolved = false end
+    if annotation.resolved == nil then
+        annotation.resolved = false
+    end
     table.insert(state.annotations, annotation)
     M.save()
     return annotation

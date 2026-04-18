@@ -183,9 +183,13 @@ local EXT_TO_LANG = {
 }
 
 local function fence_lang(file)
-    if not file then return "" end
+    if not file then
+        return ""
+    end
     local ext = file:match("%.([^%.]+)$")
-    if not ext then return "" end
+    if not ext then
+        return ""
+    end
     return EXT_TO_LANG[ext:lower()] or ext:lower()
 end
 
@@ -231,12 +235,18 @@ local function build_summary_block(annotations)
     local file_set = {}
     local type_counts = {}
     for _, ann in ipairs(annotations) do
-        if ann.file then file_set[ann.file] = true end
-        if ann.type then type_counts[ann.type] = (type_counts[ann.type] or 0) + 1 end
+        if ann.file then
+            file_set[ann.file] = true
+        end
+        if ann.type then
+            type_counts[ann.type] = (type_counts[ann.type] or 0) + 1
+        end
     end
 
     local files = {}
-    for f in pairs(file_set) do table.insert(files, f) end
+    for f in pairs(file_set) do
+        table.insert(files, f)
+    end
     table.sort(files)
 
     local type_parts = {}
@@ -246,10 +256,7 @@ local function build_summary_block(annotations)
     table.sort(type_parts)
 
     local breakdown = #type_parts > 0 and (" (" .. table.concat(type_parts, ", ") .. ")") or ""
-    local summary_line = string.format(
-        "Files reviewed: %d  |  Annotations: %d%s",
-        #files, #annotations, breakdown
-    )
+    local summary_line = string.format("Files reviewed: %d  |  Annotations: %d%s", #files, #annotations, breakdown)
     local files_line = "Files: " .. table.concat(files, ", ")
 
     return "## Summary\n" .. summary_line .. "\n" .. files_line

@@ -87,9 +87,9 @@ function M.setup(cfg_types, order)
     for key, def in pairs(cfg_types) do
         local default = DEFAULT_TYPES[key] or {}
         resolved[key] = {
-            icon      = def.icon      or default.icon      or "",
-            hl        = def.hl        or default.hl        or "Normal",
-            label     = def.label     or default.label     or key,
+            icon = def.icon or default.icon or "",
+            hl = def.hl or default.hl or "Normal",
+            label = def.label or default.label or key,
             sign_name = def.sign_name or default.sign_name or ("MeowReview" .. key),
         }
     end

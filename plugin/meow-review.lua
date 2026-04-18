@@ -31,7 +31,7 @@ if vim.g.loaded_meow_review then
 end
 vim.g.loaded_meow_review = 1
 
-    -- Check Neovim version compatibility
+-- Check Neovim version compatibility
 if vim.fn.has("nvim-0.11.0") == 0 then
     vim.api.nvim_err_writeln("meow.review.nvim requires Neovim >= 0.11.0")
     return
@@ -55,67 +55,89 @@ end
 local subcommand_tbl = {
     add = {
         impl = function(_, opts)
-            if not check_dependencies() then return end
+            if not check_dependencies() then
+                return
+            end
             require("meow.review").add_comment(opts.range > 0)
         end,
     },
     delete = {
         impl = function(_, _)
-            if not check_dependencies() then return end
+            if not check_dependencies() then
+                return
+            end
             require("meow.review").delete_comment()
         end,
     },
     view = {
         impl = function(_, _)
-            if not check_dependencies() then return end
+            if not check_dependencies() then
+                return
+            end
             require("meow.review").view_comment()
         end,
     },
     export = {
         impl = function(args, _)
-            if not check_dependencies() then return end
+            if not check_dependencies() then
+                return
+            end
             -- args[1] is an optional exporter name; nil means use default_exporter (clipboard)
             require("meow.review").export_review(args[1])
         end,
         complete = function(_)
             local ok, exp = pcall(require, "meow.review.export")
-            if ok then return exp.list() end
+            if ok then
+                return exp.list()
+            end
             return {}
         end,
     },
     clear = {
         impl = function(_, _)
-            if not check_dependencies() then return end
+            if not check_dependencies() then
+                return
+            end
             require("meow.review").clear_all()
         end,
     },
-    goto = {
+    ["goto"] = {
         impl = function(_, _)
-            if not check_dependencies() then return end
+            if not check_dependencies() then
+                return
+            end
             require("meow.review").goto_comment()
         end,
     },
     goto_file = {
         impl = function(_, _)
-            if not check_dependencies() then return end
+            if not check_dependencies() then
+                return
+            end
             require("meow.review").goto_comment_in_file()
         end,
     },
     goto_type = {
         impl = function(args, _)
-            if not check_dependencies() then return end
+            if not check_dependencies() then
+                return
+            end
             require("meow.review").goto_comment_by_type(args[1])
         end,
     },
     edit = {
         impl = function(_, _)
-            if not check_dependencies() then return end
+            if not check_dependencies() then
+                return
+            end
             require("meow.review").edit_comment()
         end,
     },
     reload = {
         impl = function(_, _)
-            if not check_dependencies() then return end
+            if not check_dependencies() then
+                return
+            end
             require("meow.review").reload()
         end,
     },
@@ -126,35 +148,47 @@ local subcommand_tbl = {
     },
     resolve = {
         impl = function(_, _)
-            if not check_dependencies() then return end
+            if not check_dependencies() then
+                return
+            end
             require("meow.review").resolve_comment()
         end,
     },
     resolve_all = {
         impl = function(_, _)
-            if not check_dependencies() then return end
+            if not check_dependencies() then
+                return
+            end
             require("meow.review").resolve_all_comments()
         end,
     },
     export_and_clear = {
         impl = function(args, _)
-            if not check_dependencies() then return end
+            if not check_dependencies() then
+                return
+            end
             require("meow.review").export_and_clear(args[1])
         end,
         complete = function(_)
             local ok, exp = pcall(require, "meow.review.export")
-            if ok then return exp.list() end
+            if ok then
+                return exp.list()
+            end
             return {}
         end,
     },
     export_file = {
         impl = function(args, _)
-            if not check_dependencies() then return end
+            if not check_dependencies() then
+                return
+            end
             require("meow.review").export_current_file(args[1])
         end,
         complete = function(_)
             local ok, exp = pcall(require, "meow.review.export")
-            if ok then return exp.list() end
+            if ok then
+                return exp.list()
+            end
             return {}
         end,
     },
@@ -198,20 +232,25 @@ end
 vim.api.nvim_create_user_command("MeowReview", meow_review_cmd, {
     nargs = "*",
     range = true,
-    desc = "Code review annotation tool (Usage: MeowReview <add|delete|edit|view|export [name]|clear|goto|reload|next|prev>)",
+    desc = "Code review annotation tool"
+        .. " (Usage: MeowReview <add|delete|edit|view|export [name]|clear|goto|reload|next|prev>)",
     complete = function(arg_lead, cmdline, _)
         -- First arg: complete subcommand names
         if cmdline:match("^['<,'>]*MeowReview[!]*%s+%w*$") then
             local subcommand_keys = vim.tbl_keys(subcommand_tbl)
             return vim.iter(subcommand_keys)
-                :filter(function(key) return key:find(arg_lead) ~= nil end)
+                :filter(function(key)
+                    return key:find(arg_lead) ~= nil
+                end)
                 :totable()
         end
         -- Second arg for 'export': complete registered exporter names
         local subcmd = cmdline:match("^['<,'>]*MeowReview[!]*%s+(%w+)%s+")
         if subcmd and subcommand_tbl[subcmd] and subcommand_tbl[subcmd].complete then
             return vim.iter(subcommand_tbl[subcmd].complete(arg_lead))
-                :filter(function(key) return key:find(arg_lead) ~= nil end)
+                :filter(function(key)
+                    return key:find(arg_lead) ~= nil
+                end)
                 :totable()
         end
     end,
@@ -219,7 +258,9 @@ vim.api.nvim_create_user_command("MeowReview", meow_review_cmd, {
 
 -- <Plug> mappings for keymap configuration without hard-coded keys
 vim.keymap.set({ "n", "v" }, "<Plug>(MeowReviewAdd)", function()
-    if not check_dependencies() then return end
+    if not check_dependencies() then
+        return
+    end
     -- In visual mode the mapping fires after mode reverts to normal;
     -- pass is_visual=true so add_comment() reads the '< '> marks.
     local mode = vim.fn.mode()
@@ -228,42 +269,58 @@ vim.keymap.set({ "n", "v" }, "<Plug>(MeowReviewAdd)", function()
 end, { desc = "Add review comment" })
 
 vim.keymap.set({ "n", "v" }, "<Plug>(MeowReviewDelete)", function()
-    if not check_dependencies() then return end
+    if not check_dependencies() then
+        return
+    end
     require("meow.review").delete_comment()
 end, { desc = "Delete review comment" })
 
 vim.keymap.set("n", "<Plug>(MeowReviewView)", function()
-    if not check_dependencies() then return end
+    if not check_dependencies() then
+        return
+    end
     require("meow.review").view_comment()
 end, { desc = "View review comment" })
 
 vim.keymap.set("n", "<Plug>(MeowReviewExport)", function()
-    if not check_dependencies() then return end
+    if not check_dependencies() then
+        return
+    end
     require("meow.review").export_review()
 end, { desc = "Export review to markdown" })
 
 vim.keymap.set("n", "<Plug>(MeowReviewClear)", function()
-    if not check_dependencies() then return end
+    if not check_dependencies() then
+        return
+    end
     require("meow.review").clear_all()
 end, { desc = "Clear all review comments" })
 
 vim.keymap.set("n", "<Plug>(MeowReviewEdit)", function()
-    if not check_dependencies() then return end
+    if not check_dependencies() then
+        return
+    end
     require("meow.review").edit_comment()
 end, { desc = "Edit review comment" })
 
 vim.keymap.set("n", "<Plug>(MeowReviewGoto)", function()
-    if not check_dependencies() then return end
+    if not check_dependencies() then
+        return
+    end
     require("meow.review").goto_comment()
 end, { desc = "Go to review comment" })
 
 vim.keymap.set("n", "<Plug>(MeowReviewGotoFile)", function()
-    if not check_dependencies() then return end
+    if not check_dependencies() then
+        return
+    end
     require("meow.review").goto_comment_in_file()
 end, { desc = "Go to review comment in current file" })
 
 vim.keymap.set("n", "<Plug>(MeowReviewGotoType)", function()
-    if not check_dependencies() then return end
+    if not check_dependencies() then
+        return
+    end
     require("meow.review").goto_comment_by_type()
 end, { desc = "Go to review comment filtered by type" })
 
@@ -280,22 +337,30 @@ vim.keymap.set("n", "<Plug>(MeowReviewPrev)", function()
 end, { desc = "Go to previous review comment" })
 
 vim.keymap.set("n", "<Plug>(MeowReviewResolve)", function()
-    if not check_dependencies() then return end
+    if not check_dependencies() then
+        return
+    end
     require("meow.review").resolve_comment()
 end, { desc = "Resolve review comment at cursor" })
 
 vim.keymap.set("n", "<Plug>(MeowReviewResolveAll)", function()
-    if not check_dependencies() then return end
+    if not check_dependencies() then
+        return
+    end
     require("meow.review").resolve_all_comments()
 end, { desc = "Resolve all review comments" })
 
 vim.keymap.set("n", "<Plug>(MeowReviewExportAndClear)", function()
-    if not check_dependencies() then return end
+    if not check_dependencies() then
+        return
+    end
     require("meow.review").export_and_clear()
 end, { desc = "Export review and clear annotations" })
 
 vim.keymap.set("n", "<Plug>(MeowReviewExportFile)", function()
-    if not check_dependencies() then return end
+    if not check_dependencies() then
+        return
+    end
     require("meow.review").export_current_file()
 end, { desc = "Export review for current file" })
 

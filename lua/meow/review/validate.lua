@@ -67,12 +67,7 @@ local function check_one(ann, root)
         return {
             annotation = ann,
             stale = true,
-            reason = string.format(
-                "line %d no longer exists in %s (%d lines total)",
-                lnum,
-                ann.file,
-                #lines
-            ),
+            reason = string.format("line %d no longer exists in %s (%d lines total)", lnum, ann.file, #lines),
         }
     end
 
@@ -136,7 +131,10 @@ function M.run(annotations, root)
 
     local lines = { string.format("MeowReview: %d stale annotation(s) found:", #stale) }
     for _, r in ipairs(stale) do
-        table.insert(lines, string.format("  [%s] %s:%d — %s", r.annotation.type, r.annotation.file, r.annotation.lnum or 0, r.reason))
+        table.insert(
+            lines,
+            string.format("  [%s] %s:%d — %s", r.annotation.type, r.annotation.file, r.annotation.lnum or 0, r.reason)
+        )
     end
     vim.notify(table.concat(lines, "\n"), vim.log.levels.WARN)
 

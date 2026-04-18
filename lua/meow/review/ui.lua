@@ -100,7 +100,10 @@ local function open_modal(modal_opts)
             text = {
                 top = modal_opts.top_label or " Review Comment ",
                 top_align = "center",
-                bottom = render_type_line(current_type) .. "  [<C-s>] Save  [" .. cycle_key .. "] Type  [<C-c>] Cancel ",
+                bottom = render_type_line(current_type)
+                    .. "  [<C-s>] Save  ["
+                    .. cycle_key
+                    .. "] Type  [<C-c>] Cancel ",
                 bottom_align = "left",
             },
         },
@@ -275,7 +278,9 @@ function M.open_view_popup(annotation)
     local height = math.min(#lines + 2, 20)
     local width = 50
     for _, l in ipairs(lines) do
-        if #l + 4 > width then width = #l + 4 end
+        if #l + 4 > width then
+            width = #l + 4
+        end
     end
 
     local type_label = string.format("%s \u{2014} %s", annotation.type, annotation.file or "")
@@ -407,7 +412,9 @@ function M.open_picker(annotations, title, on_select)
                     prompt_title = title or "Review Comments",
                     finder = finders.new_table({
                         results = entries,
-                        entry_maker = function(entry) return entry end,
+                        entry_maker = function(entry)
+                            return entry
+                        end,
                     }),
                     sorter = conf.values.generic_sorter({}),
                     previewer = conf.values.grep_previewer({}),
@@ -441,10 +448,14 @@ function M.open_picker(annotations, title, on_select)
         fzf.fzf_exec(fzf_items, {
             prompt = (title or "Review Comments") .. "> ",
             previewer = "builtin",
-            fn_transform = function(x) return x end,
+            fn_transform = function(x)
+                return x
+            end,
             actions = {
                 ["default"] = function(selected, _)
-                    if not selected or not selected[1] then return end
+                    if not selected or not selected[1] then
+                        return
+                    end
                     local idx = tonumber(selected[1]:match("^(%d+)\t"))
                     if idx and idx_to_ann[idx] and on_select then
                         on_select(idx_to_ann[idx])
@@ -475,7 +486,12 @@ function M.open_picker(annotations, title, on_select)
         win_options = { winhighlight = "Normal:Normal,FloatBorder:FloatBorder" },
     }, {
         lines = menu_items,
-        keymap = { focus_next = { "j", "<Down>" }, focus_prev = { "k", "<Up>" }, close = { "q", "<Esc>" }, submit = { "<CR>" } },
+        keymap = {
+            focus_next = { "j", "<Down>" },
+            focus_prev = { "k", "<Up>" },
+            close = { "q", "<Esc>" },
+            submit = { "<CR>" },
+        },
         on_submit = function(item)
             if item and item.annotation and on_select then
                 on_select(item.annotation)

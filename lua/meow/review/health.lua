@@ -50,7 +50,9 @@ local function check_neovim_version()
         vim.health.warn("Neovim 0.10+ is recommended for the best experience")
     else
         vim.health.warn(
-            "Neovim " .. version_str .. " (0.8.x) — plugin is functional,"
+            "Neovim "
+                .. version_str
+                .. " (0.8.x) — plugin is functional,"
                 .. " but some APIs (e.g. vim.iter) require 0.10+"
         )
     end

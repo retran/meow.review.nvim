@@ -34,9 +34,10 @@ describe("meow.review.ui", function()
         -- Stub vim APIs used by open_modal
         vim.api = vim.api or {}
         vim.api.nvim_buf_set_lines = vim.api.nvim_buf_set_lines or function() end
-        vim.api.nvim_buf_get_lines = vim.api.nvim_buf_get_lines or function()
-            return { "test comment" }
-        end
+        vim.api.nvim_buf_get_lines = vim.api.nvim_buf_get_lines
+            or function()
+                return { "test comment" }
+            end
         vim.api.nvim_win_set_cursor = vim.api.nvim_win_set_cursor or function() end
         vim.cmd = vim.cmd or function() end
 
@@ -146,7 +147,9 @@ describe("meow.review.ui", function()
             package.loaded["telescope"] = nil
             package.loaded["fzf-lua"] = nil
             package.loaded["meow.review.store"] = {
-                current_root = function() return "/tmp" end,
+                current_root = function()
+                    return "/tmp"
+                end,
             }
             -- Stub nui.menu as a callable that returns a mock menu
             package.loaded["nui.menu"] = setmetatable({}, {

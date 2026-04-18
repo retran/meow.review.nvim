@@ -12,7 +12,9 @@ describe("meow.review.export", function()
         package.loaded["meow.review.config.internal"] = nil
         package.loaded["meow.review.utils"] = {
             resolve_path = function(p, root)
-                if p:sub(1, 1) == "/" then return p end
+                if p:sub(1, 1) == "/" then
+                    return p
+                end
                 return root .. "/" .. p
             end,
             ensure_parent_dirs = function() end,
@@ -31,17 +33,23 @@ describe("meow.review.export", function()
 
     describe("register_formatter() / list_formatters()", function()
         it("registers a formatter and returns it in list", function()
-            export.register_formatter("test_fmt", function(_) return "test" end)
+            export.register_formatter("test_fmt", function(_)
+                return "test"
+            end)
             local list = export.list_formatters()
             local found = false
             for _, n in ipairs(list) do
-                if n == "test_fmt" then found = true end
+                if n == "test_fmt" then
+                    found = true
+                end
             end
             assert.is_true(found)
         end)
 
         it("unregister_formatter removes it from the list", function()
-            export.register_formatter("to_remove", function(_) return "" end)
+            export.register_formatter("to_remove", function(_)
+                return ""
+            end)
             export.unregister_formatter("to_remove")
             local list = export.list_formatters()
             for _, n in ipairs(list) do
@@ -50,13 +58,21 @@ describe("meow.review.export", function()
         end)
 
         it("replacing a formatter with the same name keeps order", function()
-            export.register_formatter("a", function(_) return "v1" end)
-            export.register_formatter("b", function(_) return "b" end)
-            export.register_formatter("a", function(_) return "v2" end)
+            export.register_formatter("a", function(_)
+                return "v1"
+            end)
+            export.register_formatter("b", function(_)
+                return "b"
+            end)
+            export.register_formatter("a", function(_)
+                return "v2"
+            end)
             -- "a" should still be in the list (order preserved, not duplicated)
             local count = 0
             for _, n in ipairs(export.list_formatters()) do
-                if n == "a" then count = count + 1 end
+                if n == "a" then
+                    count = count + 1
+                end
             end
             assert.equal(1, count)
         end)
@@ -73,7 +89,9 @@ describe("meow.review.export", function()
             local list = export.list_formatters()
             local found = false
             for _, n in ipairs(list) do
-                if n == "markdown" then found = true end
+                if n == "markdown" then
+                    found = true
+                end
             end
             assert.is_true(found)
         end)
@@ -82,7 +100,9 @@ describe("meow.review.export", function()
             local list = export.list_formatters()
             local found = false
             for _, n in ipairs(list) do
-                if n == "json" then found = true end
+                if n == "json" then
+                    found = true
+                end
             end
             assert.is_true(found)
         end)
@@ -107,7 +127,14 @@ describe("meow.review.export", function()
 
         it("includes annotation text", function()
             local md = export.build_markdown({
-                { file = "baz.lua", lnum = 1, end_lnum = 1, type = "SUGGESTION", text = "refactor this", timestamp = os.time() },
+                {
+                    file = "baz.lua",
+                    lnum = 1,
+                    end_lnum = 1,
+                    type = "SUGGESTION",
+                    text = "refactor this",
+                    timestamp = os.time(),
+                },
             }, "")
             assert.truthy(md:find("refactor this"))
         end)
@@ -131,9 +158,9 @@ describe("meow.review.export", function()
 
     describe("build_markdown() summary block", function()
         local anns = {
-            { file = "src/foo.lua", lnum = 1, end_lnum = 1, type = "ISSUE",      text = "a", timestamp = os.time() },
+            { file = "src/foo.lua", lnum = 1, end_lnum = 1, type = "ISSUE", text = "a", timestamp = os.time() },
             { file = "src/bar.lua", lnum = 2, end_lnum = 2, type = "SUGGESTION", text = "b", timestamp = os.time() },
-            { file = "src/foo.lua", lnum = 5, end_lnum = 5, type = "NOTE",        text = "c", timestamp = os.time() },
+            { file = "src/foo.lua", lnum = 5, end_lnum = 5, type = "NOTE", text = "c", timestamp = os.time() },
         }
 
         it("export_summary=true produces a ## Summary section", function()
@@ -177,12 +204,30 @@ describe("meow.review.export", function()
         before_each(function()
             captured_output = nil
             stub_annotations = {
-                { file = "src/foo.lua", lnum = 1, end_lnum = 1, type = "ISSUE",      text = "foo issue",  timestamp = os.time() },
-                { file = "src/bar.lua", lnum = 2, end_lnum = 2, type = "SUGGESTION", text = "bar suggest", timestamp = os.time() },
+                {
+                    file = "src/foo.lua",
+                    lnum = 1,
+                    end_lnum = 1,
+                    type = "ISSUE",
+                    text = "foo issue",
+                    timestamp = os.time(),
+                },
+                {
+                    file = "src/bar.lua",
+                    lnum = 2,
+                    end_lnum = 2,
+                    type = "SUGGESTION",
+                    text = "bar suggest",
+                    timestamp = os.time(),
+                },
             }
             package.loaded["meow.review.store"] = {
-                sorted = function() return stub_annotations end,
-                current_root = function() return "/tmp/test" end,
+                sorted = function()
+                    return stub_annotations
+                end,
+                current_root = function()
+                    return "/tmp/test"
+                end,
             }
             export.setup_builtins({ disabled_exporters = {} })
             -- Register a spy exporter
@@ -205,7 +250,9 @@ describe("meow.review.export", function()
         it("filter.file for nonexistent file warns no annotations", function()
             local notified = false
             vim.notify = function(msg, _)
-                if msg:find("No annotations") then notified = true end
+                if msg:find("No annotations") then
+                    notified = true
+                end
             end
             local ok = export.export("spy", "markdown", { file = "nonexistent.lua" })
             assert.is_false(ok)
@@ -219,13 +266,17 @@ describe("meow.review.export", function()
         it("registers 'avante' exporter when avante.api is available", function()
             local ask_args = {}
             package.loaded["avante.api"] = {
-                ask = function(opts) table.insert(ask_args, opts) end,
+                ask = function(opts)
+                    table.insert(ask_args, opts)
+                end,
             }
             export.setup_builtins({ disabled_exporters = {} })
             local list = export.list()
             local found = false
             for _, n in ipairs(list) do
-                if n == "avante" then found = true end
+                if n == "avante" then
+                    found = true
+                end
             end
             assert.is_true(found)
             package.loaded["avante.api"] = nil
@@ -248,7 +299,9 @@ describe("meow.review.export", function()
             local list = export.list()
             local found = false
             for _, n in ipairs(list) do
-                if n == "codecompanion" then found = true end
+                if n == "codecompanion" then
+                    found = true
+                end
             end
             assert.is_true(found)
             package.loaded["codecompanion"] = nil
@@ -266,7 +319,9 @@ describe("meow.review.export", function()
         it("calling 'avante' exporter invokes avante_api.ask with markdown", function()
             local ask_args = {}
             package.loaded["avante.api"] = {
-                ask = function(opts) table.insert(ask_args, opts) end,
+                ask = function(opts)
+                    table.insert(ask_args, opts)
+                end,
             }
             export.setup_builtins({ disabled_exporters = {} })
             -- Manually call the registered avante exporter
@@ -282,9 +337,13 @@ describe("meow.review.export", function()
             -- Call export with a stub store
             package.loaded["meow.review.store"] = {
                 sorted = function()
-                    return {{ file = "f.lua", lnum = 1, end_lnum = 1, type = "ISSUE", text = "hi", timestamp = os.time() }}
+                    return {
+                        { file = "f.lua", lnum = 1, end_lnum = 1, type = "ISSUE", text = "hi", timestamp = os.time() },
+                    }
                 end,
-                current_root = function() return "/tmp" end,
+                current_root = function()
+                    return "/tmp"
+                end,
             }
             export.export("avante", "markdown")
             assert.equal(1, #ask_args)

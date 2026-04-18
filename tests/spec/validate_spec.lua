@@ -17,7 +17,9 @@ describe("meow.review.validate", function()
         -- Stub signs and types
         package.loaded["meow.review.signs"] = { NS = 0 }
         package.loaded["meow.review.types"] = {
-            get = function(_) return { icon = "!" } end,
+            get = function(_)
+                return { icon = "!" }
+            end,
         }
 
         validate = require("meow.review.validate")
@@ -36,7 +38,9 @@ describe("meow.review.validate", function()
         local abs = tmpdir .. "/" .. rel
         -- Create parent dir if needed
         local parent = abs:match("^(.*)/[^/]*$")
-        if parent then vim.fn.mkdir(parent, "p") end
+        if parent then
+            vim.fn.mkdir(parent, "p")
+        end
         local f = io.open(abs, "w")
         f:write(table.concat(lines, "\n") .. "\n")
         f:close()

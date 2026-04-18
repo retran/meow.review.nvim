@@ -52,7 +52,8 @@ local default_config = {
     auto_gitignore = "prompt",
     ---@type string
     prompt_preamble = "The following annotations were left during a code review. "
-        .. "For each annotation, read the code snippet and comment carefully, then apply the requested fix directly to the file. "
+        .. "For each annotation, read the code snippet and comment carefully, "
+        .. "then apply the requested fix directly to the file. "
         .. "Prefer minimal, targeted edits. Do not refactor unrelated code.",
     ---@type boolean
     export_summary = true,

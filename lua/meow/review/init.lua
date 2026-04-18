@@ -127,11 +127,15 @@ function M.setup(opts)
             _bufenter_timer = vim.defer_fn(function()
                 _bufenter_timer = nil
                 local abs = vim.api.nvim_buf_get_name(bufnr)
-                if abs == "" then return end
+                if abs == "" then
+                    return
+                end
                 local st = store()
                 local r = st.current_root()
                 local rel = abs:gsub("^" .. vim.pesc(r) .. "/", "")
-                if rel == abs then rel = vim.fn.fnamemodify(abs, ":.") end
+                if rel == abs then
+                    rel = vim.fn.fnamemodify(abs, ":.")
+                end
                 if st.has_file(rel) then
                     signs().render_buffer(bufnr)
                 end
@@ -196,11 +200,11 @@ function M.add_comment(is_visual)
     -- but the '< and '> marks still hold the last visual selection on this buffer.
     if is_visual then
         v_start = vim.fn.line("'<")
-        v_end   = vim.fn.line("'>")
+        v_end = vim.fn.line("'>")
         -- Marks are 0 when never set (fresh buffer) — treat as single-line
         if v_start == 0 then
             v_start = vim.api.nvim_win_get_cursor(0)[1]
-            v_end   = v_start
+            v_end = v_start
         end
     end
 
@@ -382,7 +386,9 @@ function M.goto_comment_in_file()
         vim.notify("MeowReview: No file open.", vim.log.levels.WARN)
         return
     end
-    local filtered = vim.tbl_filter(function(a) return a.file == rel end, s.sorted())
+    local filtered = vim.tbl_filter(function(a)
+        return a.file == rel
+    end, s.sorted())
     if #filtered == 0 then
         vim.notify("MeowReview: No annotations in current file.", vim.log.levels.INFO)
         return
@@ -404,7 +410,9 @@ function M.goto_comment_by_type(type_name)
     end
 
     local function show_picker(t)
-        local filtered = vim.tbl_filter(function(a) return a.type == t end, all)
+        local filtered = vim.tbl_filter(function(a)
+            return a.type == t
+        end, all)
         if #filtered == 0 then
             vim.notify("MeowReview: No annotations of type " .. t .. ".", vim.log.levels.INFO)
             return
@@ -443,10 +451,7 @@ function M.reload()
     local root = store().get_project_root()
     store().load(root)
     signs().render_all()
-    vim.notify(
-        string.format("MeowReview: Reloaded %d comment(s).", store().count()),
-        vim.log.levels.INFO
-    )
+    vim.notify(string.format("MeowReview: Reloaded %d comment(s).", store().count()), vim.log.levels.INFO)
 end
 
 -- ── Navigation ────────────────────────────────────────────────────────────────
@@ -460,10 +465,7 @@ function M._jump_to(ann)
     local abs_path = root .. "/" .. ann.file
 
     if vim.fn.filereadable(abs_path) == 0 then
-        vim.notify(
-            string.format("MeowReview: File no longer exists: %s", ann.file),
-            vim.log.levels.WARN
-        )
+        vim.notify(string.format("MeowReview: File no longer exists: %s", ann.file), vim.log.levels.WARN)
         return false
     end
 
@@ -501,7 +503,9 @@ function M.next_comment()
             return
         end
         visited[ann.id] = true
-        if M._jump_to(ann) then return end
+        if M._jump_to(ann) then
+            return
+        end
         ann = s.find_next(ann.file, ann.lnum + 1)
     end
 end
@@ -531,7 +535,9 @@ function M.prev_comment()
             return
         end
         visited[ann.id] = true
-        if M._jump_to(ann) then return end
+        if M._jump_to(ann) then
+            return
+        end
         ann = s.find_prev(ann.file, ann.lnum - 1)
     end
 end

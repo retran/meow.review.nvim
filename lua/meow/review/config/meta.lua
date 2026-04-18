@@ -50,20 +50,37 @@
 ---@field sign_name? string Neovim sign name; auto-derived as "MeowReview"..key if omitted.
 
 ---@class meow.review.Config
----@field context_lines? number Lines of source context to capture before and after the annotated range (default 3). Set to 0 to disable snippet capture.
----@field disabled_exporters? string[] Built-in exporter names to disable (e.g. {"clipboard"} to disable the clipboard exporter).
----@field default_exporter? string Exporter to run when no name is given to `:MeowReview export` (default "clipboard").
----@field default_formatter? string Formatter to use when no formatter is specified (default "markdown"). Built-ins: "markdown", "json".
----@field export_filename? string Filename written by the `file` and `file_prompt` exporters (default ".cache/meow-review/review.md"). Relative paths are resolved against the project root.
----@field store_path? string Path to the annotation store JSON file. Relative paths are resolved against the project root; absolute paths are used as-is. Parent directories are created automatically. Default: ".cache/meow-review/annotations.json".
+---@field context_lines? number Lines of source context to capture before and after the annotated range
+---  (default 3). Set to 0 to disable snippet capture.
+---@field disabled_exporters? string[] Built-in exporter names to disable
+---  (e.g. {"clipboard"} to disable the clipboard exporter).
+---@field default_exporter? string Exporter to run when no name is given to `:MeowReview export`
+---  (default "clipboard").
+---@field default_formatter? string Formatter to use when no formatter is specified
+---  (default "markdown"). Built-ins: "markdown", "json".
+---@field export_filename? string Filename written by the `file` and `file_prompt` exporters
+---  (default ".cache/meow-review/review.md").
+---  Relative paths are resolved against the project root.
+---@field store_path? string Path to the annotation store JSON file.
+---  Relative paths are resolved against the project root; absolute paths are used as-is.
+---  Parent directories are created automatically.
+---  Default: ".cache/meow-review/annotations.json".
 ---@field modal_width? number Width (in columns) of the add/edit comment modal. Default: 64.
 ---@field modal_height? number Height (in lines) of the add/edit comment modal. Default: 6.
----@field modal_cycle_key? string Insert-mode key used to cycle the annotation type in the add/edit modal. Default: "<C-t>". Change if it conflicts with your mappings.
----@field auto_gitignore? string|boolean Whether to add the store file path to .gitignore. "always" adds it silently, "prompt" (default) shows a vim.ui.select prompt once, false disables.
----@field annotation_types? table<string, meow.review.AnnotationType> Custom annotation type definitions. Replaces the default set (ISSUE, SUGGESTION, NOTE) when provided.
----@field annotation_type_order? string[] Tab-cycling order for the add-modal. Defaults to sorted keys of annotation_types.
----@field prompt_preamble? string Text inserted after the document heading in the exported Markdown. Defaults to an instruction that asks the AI agent to apply each annotation as a targeted fix. Set to "" to omit it.
----@field export_summary? boolean When true (default), inject a summary block listing file count, annotation count, type breakdown, and file list after the preamble.
+---@field modal_cycle_key? string Insert-mode key used to cycle the annotation type in the
+---  add/edit modal. Default: "<C-t>". Change if it conflicts with your mappings.
+---@field auto_gitignore? string|boolean Whether to add the store file path to .gitignore.
+---  "always" adds it silently, "prompt" (default) shows a vim.ui.select prompt once,
+---  false disables.
+---@field annotation_types? table<string, meow.review.AnnotationType> Custom annotation type
+---  definitions. Replaces the default set (ISSUE, SUGGESTION, NOTE) when provided.
+---@field annotation_type_order? string[] Tab-cycling order for the add-modal.
+---  Defaults to sorted keys of annotation_types.
+---@field prompt_preamble? string Text inserted after the document heading in the exported
+---  Markdown. Defaults to an instruction that asks the AI agent to apply each annotation
+---  as a targeted fix. Set to "" to omit it.
+---@field export_summary? boolean When true (default), inject a summary block listing file
+---  count, annotation count, type breakdown, and file list after the preamble.
 
 ---@type meow.review.Config | fun(): meow.review.Config | nil
 vim.g.meow_review = vim.g.meow_review
