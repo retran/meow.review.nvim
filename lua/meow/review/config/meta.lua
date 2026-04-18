@@ -53,6 +53,7 @@
 ---@field disabled_exporters? string[] Built-in exporter names to disable (e.g. {"clipboard"} to disable the clipboard exporter).
 ---@field default_exporter? string Exporter to run when no name is given to `:MeowReview export` (default "clipboard").
 ---@field export_filename? string Filename written by the `file` and `file_prompt` exporters (default ".meow-review.md").
+---@field store_path? string Path to the annotation store JSON file. Relative paths are resolved against the project root; absolute paths are used as-is. Parent directories are created automatically. Default: ".cache/meow-review/annotations.json".
 ---@field annotation_types? table<string, meow.review.AnnotationType> Custom annotation type definitions. Replaces the default set (ISSUE, SUGGESTION, NOTE) when provided.
 ---@field annotation_type_order? string[] Tab-cycling order for the add-modal. Defaults to sorted keys of annotation_types.
 ---@field prompt_preamble? string Text inserted after the document heading in the exported Markdown. Defaults to an instruction that asks the AI agent to apply each annotation as a targeted fix. Set to "" to omit it.

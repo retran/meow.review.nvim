@@ -1,174 +1,208 @@
 -- tests/spec/store_spec.lua
 -- Tests for lua/meow/review/store.lua
+-- Run with: make test
 
-local T = require("mini.test")
+local assert = require("luassert")
 
-local child = T.new_child_neovim()
-
--- Helper: stub out disk I/O and signs so store can be exercised in isolation
-local function setup_store_stubs()
-    child.lua("package.loaded['meow.review.store'] = nil")
-    child.lua("package.loaded['meow.review.config.internal'] = nil")
-    child.lua("package.loaded['meow.review.signs'] = nil")
-    child.lua("package.loaded['meow.review.signs'] = { NS = 0, place = function() end, unplace = function() end, render_all = function() end }")
-    child.lua("require('meow.review.store').save = function() end")
+-- Stub out disk I/O and the signs module for isolation
+local function reset_store()
+    package.loaded["meow.review.store"] = nil
+    package.loaded["meow.review.config.internal"] = nil
+    package.loaded["meow.review.signs"] = nil
+    -- Provide a no-op signs stub
+    package.loaded["meow.review.signs"] = {
+        NS = 0,
+        place = function() end,
+        unplace = function() end,
+        render_all = function() end,
+    }
+    local s = require("meow.review.store")
+    -- Disable disk I/O
+    s.save = function() end
+    vim.g.meow_review = nil
+    return s
 end
 
-local describe = T.new_set({
-    hooks = {
-        pre_case = function()
-            child.restart({ "-u", "scripts/minimal_init.lua" })
-            setup_store_stubs()
-        end,
-        post_once = function()
-            child.stop()
-        end,
-    },
-})
+describe("meow.review.store", function()
+    local store
 
--- ── get_project_root ──────────────────────────────────────────────────────────
+    before_each(function()
+        store = reset_store()
+    end)
 
-describe["get_project_root returns a non-empty string"] = function()
-    local root = child.lua_get("require('meow.review.store').get_project_root()")
-    T.expect.no_equality(root, nil)
-    T.expect.no_equality(root, "")
-end
+    -- ── get_project_root ──────────────────────────────────────────────────────
 
-describe["get_project_root uses fallback for non-git dir"] = function()
-    -- /tmp is unlikely to be a git root; we just verify a string is returned
-    local root = child.lua_get("require('meow.review.store').get_project_root('/tmp')")
-    T.expect.no_equality(root, nil)
-    T.expect.no_equality(root, "")
-end
+    describe("get_project_root()", function()
+        it("returns a non-empty string", function()
+            local root = store.get_project_root()
+            assert.is_string(root)
+            assert.truthy(#root > 0)
+        end)
 
--- ── current_root / set_project_root ──────────────────────────────────────────
+        it("returns a non-empty string for a non-git directory", function()
+            local root = store.get_project_root("/tmp")
+            assert.is_string(root)
+            assert.truthy(#root > 0)
+        end)
+    end)
 
-describe["current_root reflects set_project_root"] = function()
-    child.lua("require('meow.review.store').set_project_root('/fake/root')")
-    local root = child.lua_get("require('meow.review.store').current_root()")
-    T.expect.equality(root, "/fake/root")
-end
+    -- ── current_root / set_project_root ──────────────────────────────────────
 
--- ── CRUD ──────────────────────────────────────────────────────────────────────
+    describe("set_project_root() / current_root()", function()
+        it("current_root() reflects set_project_root()", function()
+            store.set_project_root("/fake/root")
+            assert.equal("/fake/root", store.current_root())
+        end)
+    end)
 
-describe["add returns annotation with id and timestamp"] = function()
-    child.lua("_G._ann = require('meow.review.store').add({ file = 'foo.lua', lnum = 1, type = 'ISSUE', text = 'bad code' })")
-    local id = child.lua_get("_G._ann.id")
-    T.expect.no_equality(id, nil)
-    T.expect.no_equality(id, "")
-    local ts = child.lua_get("_G._ann.timestamp")
-    T.expect.no_equality(ts, nil)
-    T.expect.equality(child.lua_get("_G._ann.file"), "foo.lua")
-end
+    -- ── get_store_path ────────────────────────────────────────────────────────
 
-describe["count reflects number of annotations"] = function()
-    child.lua("require('meow.review.store').add({ file = 'a.lua', lnum = 1, type = 'NOTE', text = 'x' })")
-    child.lua("require('meow.review.store').add({ file = 'b.lua', lnum = 2, type = 'NOTE', text = 'y' })")
-    T.expect.equality(child.lua_get("require('meow.review.store').count()"), 2)
-end
+    describe("get_store_path()", function()
+        it("returns a non-empty string", function()
+            local p = store.get_store_path("/some/root")
+            assert.is_string(p)
+            assert.truthy(#p > 0)
+        end)
 
-describe["delete removes annotation by id"] = function()
-    child.lua("local ann = require('meow.review.store').add({ file = 'a.lua', lnum = 1, type = 'NOTE', text = 'x' }); _G._id = ann.id")
-    child.lua("require('meow.review.store').delete(_G._id)")
-    T.expect.equality(child.lua_get("require('meow.review.store').count()"), 0)
-end
+        it("resolves relative store_path against provided root", function()
+            local p = store.get_store_path("/my/project")
+            assert.equal("/my/project/.cache/meow-review/annotations.json", p)
+        end)
 
-describe["delete returns false for unknown id"] = function()
-    local deleted = child.lua_get("require('meow.review.store').delete('nonexistent_id')")
-    T.expect.equality(deleted, false)
-end
+        it("passes an absolute store_path through unchanged", function()
+            vim.g.meow_review = { store_path = "/absolute/path/store.json" }
+            package.loaded["meow.review.config.internal"] = nil
+            local p = store.get_store_path("/ignored/root")
+            assert.equal("/absolute/path/store.json", p)
+        end)
+    end)
 
-describe["update changes text and type"] = function()
-    child.lua("local ann = require('meow.review.store').add({ file = 'a.lua', lnum = 1, type = 'NOTE', text = 'original' }); _G._id = ann.id")
-    child.lua("require('meow.review.store').update(_G._id, { text = 'updated', type = 'ISSUE' })")
-    T.expect.equality(child.lua_get("require('meow.review.store').all()[1].text"), "updated")
-    T.expect.equality(child.lua_get("require('meow.review.store').all()[1].type"), "ISSUE")
-end
+    -- ── CRUD ──────────────────────────────────────────────────────────────────
 
-describe["clear removes all annotations"] = function()
-    child.lua("require('meow.review.store').add({ file = 'a.lua', lnum = 1, type = 'NOTE', text = 'x' })")
-    child.lua("require('meow.review.store').add({ file = 'b.lua', lnum = 2, type = 'NOTE', text = 'y' })")
-    child.lua("require('meow.review.store').clear()")
-    T.expect.equality(child.lua_get("require('meow.review.store').count()"), 0)
-end
+    describe("add()", function()
+        it("returns the annotation with id and timestamp set", function()
+            local ann = store.add({ file = "foo.lua", lnum = 1, type = "ISSUE", text = "bad" })
+            assert.is_string(ann.id)
+            assert.truthy(#ann.id > 0)
+            assert.is_number(ann.timestamp)
+            assert.truthy(ann.timestamp > 0)
+            assert.equal("foo.lua", ann.file)
+        end)
 
--- ── Queries ───────────────────────────────────────────────────────────────────
+        it("generates unique IDs for rapid successive calls", function()
+            local seen = {}
+            for i = 1, 20 do
+                local ann = store.add({ file = "f.lua", lnum = i, type = "NOTE", text = "x" })
+                assert.is_nil(seen[ann.id], "duplicate id: " .. ann.id)
+                seen[ann.id] = true
+            end
+        end)
+    end)
 
-describe["get_at_line returns annotations covering that line"] = function()
-    child.lua("require('meow.review.store').add({ file = 'a.lua', lnum = 5, end_lnum = 10, type = 'NOTE', text = 'x' })")
-    T.expect.equality(#child.lua_get("require('meow.review.store').get_at_line('a.lua', 7)"), 1)
-    T.expect.equality(#child.lua_get("require('meow.review.store').get_at_line('a.lua', 15)"), 0)
-end
+    describe("count()", function()
+        it("reflects number of annotations", function()
+            store.add({ file = "a.lua", lnum = 1, type = "NOTE", text = "x" })
+            store.add({ file = "b.lua", lnum = 2, type = "NOTE", text = "y" })
+            assert.equal(2, store.count())
+        end)
 
-describe["sorted returns annotations in file+lnum order"] = function()
-    child.lua("require('meow.review.store').add({ file = 'b.lua', lnum = 1, type = 'NOTE', text = 'b' })")
-    child.lua("require('meow.review.store').add({ file = 'a.lua', lnum = 5, type = 'NOTE', text = 'a' })")
-    child.lua("require('meow.review.store').add({ file = 'a.lua', lnum = 2, type = 'NOTE', text = 'c' })")
-    local sorted = child.lua_get("require('meow.review.store').sorted()")
-    T.expect.equality(sorted[1].file, "a.lua")
-    T.expect.equality(sorted[1].lnum, 2)
-    T.expect.equality(sorted[2].lnum, 5)
-    T.expect.equality(sorted[3].file, "b.lua")
-end
+        it("returns 0 when store is empty", function()
+            assert.equal(0, store.count())
+        end)
+    end)
 
-describe["find_next wraps around to first annotation"] = function()
-    child.lua("require('meow.review.store').add({ file = 'a.lua', lnum = 1, type = 'NOTE', text = 'x' })")
-    T.expect.equality(child.lua_get("require('meow.review.store').find_next('z.lua', 999).file"), "a.lua")
-end
+    describe("delete()", function()
+        it("removes annotation by id and returns true", function()
+            local ann = store.add({ file = "a.lua", lnum = 1, type = "NOTE", text = "x" })
+            local deleted = store.delete(ann.id)
+            assert.is_true(deleted)
+            assert.equal(0, store.count())
+        end)
 
-describe["find_prev wraps around to last annotation"] = function()
-    child.lua("require('meow.review.store').add({ file = 'z.lua', lnum = 99, type = 'NOTE', text = 'x' })")
-    T.expect.equality(child.lua_get("require('meow.review.store').find_prev('a.lua', 1).file"), "z.lua")
-end
+        it("returns false for an unknown id", function()
+            assert.is_false(store.delete("nonexistent_id"))
+        end)
+    end)
 
-describe["has_file returns true iff file has annotations"] = function()
-    child.lua("require('meow.review.store').add({ file = 'present.lua', lnum = 1, type = 'NOTE', text = 'x' })")
-    T.expect.equality(child.lua_get("require('meow.review.store').has_file('present.lua')"), true)
-    T.expect.equality(child.lua_get("require('meow.review.store').has_file('absent.lua')"), false)
-end
+    describe("update()", function()
+        it("changes text and type of an annotation", function()
+            local ann = store.add({ file = "a.lua", lnum = 1, type = "NOTE", text = "original" })
+            store.update(ann.id, { text = "updated", type = "ISSUE" })
+            local all = store.all()
+            assert.equal("updated", all[1].text)
+            assert.equal("ISSUE", all[1].type)
+        end)
 
--- ── ID uniqueness ─────────────────────────────────────────────────────────────
+        it("returns false for an unknown id", function()
+            assert.is_false(store.update("no_such_id", { text = "x" }))
+        end)
+    end)
 
-describe["add() generates unique IDs for rapid successive calls"] = function()
-    for i = 1, 10 do
-        child.lua("require('meow.review.store').add({ file = 'f.lua', lnum = " .. i .. ", type = 'NOTE', text = 'x" .. i .. "' })")
-    end
-    local all = child.lua_get("require('meow.review.store').all()")
-    local seen = {}
-    for _, ann in ipairs(all) do
-        T.expect.equality(seen[ann.id], nil) -- no duplicate
-        seen[ann.id] = true
-    end
-    T.expect.equality(#all, 10)
-end
+    describe("clear()", function()
+        it("removes all annotations", function()
+            store.add({ file = "a.lua", lnum = 1, type = "NOTE", text = "x" })
+            store.add({ file = "b.lua", lnum = 2, type = "NOTE", text = "y" })
+            store.clear()
+            assert.equal(0, store.count())
+        end)
+    end)
 
-describe["add() IDs are non-empty strings"] = function()
-    child.lua("_G._ann2 = require('meow.review.store').add({ file = 'f.lua', lnum = 1, type = 'NOTE', text = 'y' })")
-    local id = child.lua_get("_G._ann2.id")
-    T.expect.no_equality(id, nil)
-    T.expect.no_equality(id, "")
-    T.expect.equality(type(id), "string")
-end
+    -- ── Queries ───────────────────────────────────────────────────────────────
 
--- ── get_store_path ────────────────────────────────────────────────────────────
+    describe("get_at_line()", function()
+        it("returns annotations covering the given line", function()
+            store.add({ file = "a.lua", lnum = 5, end_lnum = 10, type = "NOTE", text = "x" })
+            assert.equal(1, #store.get_at_line("a.lua", 7))
+            assert.equal(0, #store.get_at_line("a.lua", 15))
+        end)
 
-describe["get_store_path returns a non-empty string"] = function()
-    local path = child.lua_get("require('meow.review.store').get_store_path('/some/root')")
-    T.expect.no_equality(path, nil)
-    T.expect.no_equality(path, "")
-end
+        it("returns empty table for an unknown file", function()
+            assert.same({}, store.get_at_line("missing.lua", 1))
+        end)
+    end)
 
-describe["get_store_path resolves relative store_path against provided root"] = function()
-    -- Default store_path is relative: .cache/meow-review/annotations.json
-    local path = child.lua_get("require('meow.review.store').get_store_path('/my/project')")
-    T.expect.equality(path, "/my/project/.cache/meow-review/annotations.json")
-end
+    describe("sorted()", function()
+        it("returns annotations in file+lnum order", function()
+            store.add({ file = "b.lua", lnum = 1, type = "NOTE", text = "b" })
+            store.add({ file = "a.lua", lnum = 5, type = "NOTE", text = "a" })
+            store.add({ file = "a.lua", lnum = 2, type = "NOTE", text = "c" })
+            local s = store.sorted()
+            assert.equal("a.lua", s[1].file)
+            assert.equal(2, s[1].lnum)
+            assert.equal(5, s[2].lnum)
+            assert.equal("b.lua", s[3].file)
+        end)
+    end)
 
-describe["get_store_path passes absolute store_path through unchanged"] = function()
-    child.lua("vim.g.meow_review = { store_path = '/absolute/path/store.json' }")
-    child.lua("package.loaded['meow.review.config.internal'] = nil")
-    local path = child.lua_get("require('meow.review.store').get_store_path('/ignored/root')")
-    T.expect.equality(path, "/absolute/path/store.json")
-end
+    describe("find_next()", function()
+        it("wraps around to the first annotation when past the last", function()
+            store.add({ file = "a.lua", lnum = 1, type = "NOTE", text = "x" })
+            local ann = store.find_next("z.lua", 999)
+            assert.equal("a.lua", ann.file)
+        end)
 
-return describe
+        it("returns nil when store is empty", function()
+            assert.is_nil(store.find_next("a.lua", 1))
+        end)
+    end)
+
+    describe("find_prev()", function()
+        it("wraps around to the last annotation when before the first", function()
+            store.add({ file = "z.lua", lnum = 99, type = "NOTE", text = "x" })
+            local ann = store.find_prev("a.lua", 1)
+            assert.equal("z.lua", ann.file)
+        end)
+
+        it("returns nil when store is empty", function()
+            assert.is_nil(store.find_prev("a.lua", 1))
+        end)
+    end)
+
+    describe("has_file()", function()
+        it("returns true iff a file has annotations", function()
+            store.add({ file = "present.lua", lnum = 1, type = "NOTE", text = "x" })
+            assert.is_true(store.has_file("present.lua"))
+            assert.is_false(store.has_file("absent.lua"))
+        end)
+    end)
+end)

@@ -39,6 +39,8 @@ local default_config = {
     ---@type string
     export_filename = ".meow-review.md",
     ---@type string
+    store_path = ".cache/meow-review/annotations.json",
+    ---@type string
     prompt_preamble = "The following annotations were left during a code review. "
         .. "For each annotation, read the code snippet and comment carefully, then apply the requested fix directly to the file. "
         .. "Prefer minimal, targeted edits. Do not refactor unrelated code.",
@@ -53,10 +55,12 @@ function M.validate(cfg)
         disabled_exporters = { cfg.disabled_exporters, "table" },
         default_exporter = { cfg.default_exporter, "string" },
         export_filename = { cfg.export_filename, "string" },
+        store_path = { cfg.store_path, "string" },
         prompt_preamble = { cfg.prompt_preamble, "string" },
     })
     if not ok then
-        return false, err
+        -- Prefix with the config table path so users know exactly what is wrong
+        return false, "vim.g.meow_review." .. (err or "unknown error")
     end
     return true, nil
 end

@@ -8,7 +8,7 @@ on:
 
 jobs:
   test:
-    name: Tests (${{ matrix.nvim }})
+    name: Tests (nvim ${{ matrix.nvim }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -20,17 +20,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Neovim
+      - name: Install Neovim (${{ matrix.nvim }})
         uses: rhysd/action-setup-vim@v1
         with:
           neovim: true
           version: ${{ matrix.nvim }}
 
-      - name: Cache deps (mini.nvim + nui.nvim)
+      - name: Install LuaRocks
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y luarocks
+
+      - name: Install test dependencies (busted + nlua for Lua 5.1)
+        run: luarocks --lua-version 5.1 install busted && luarocks --lua-version 5.1 install nlua
+
+      - name: Cache nui.nvim dep
         uses: actions/cache@v4
         with:
           path: deps/
-          key: deps-${{ hashFiles('scripts/minimal_init.lua') }}
+          key: deps-nui-${{ hashFiles('tests/busted_helper.lua') }}
 
       - name: Run tests
         run: make test
@@ -61,4 +69,4 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           version: latest
-          args: --check lua/ plugin/ tests/
+          args: --check lua/ plugin/ tests/ scripts/

@@ -1,41 +1,49 @@
 # Makefile for meow.review.nvim
-# Requires: nvim, stylua, luacheck (optional: luarocks)
+# Requires: nvim (>= 0.11), stylua, luacheck
+# Optional:  luarocks (for bootstrapping busted/nlua)
 
-.PHONY: all test lint format check clean
+.PHONY: all test lint format format-check check deps clean
 
-NVIM ?= nvim
-STYLUA ?= stylua
-LUACHECK ?= luacheck
+NVIM      ?= nvim
+STYLUA    ?= stylua
+LUACHECK  ?= luacheck
+NLUA      ?= $(HOME)/.luarocks/bin/nlua
 
-LUA_FILES := lua/**/*.lua lua/**/**/*.lua plugin/**/*.lua
+LUA_FILES := lua/**/*.lua lua/**/**/*.lua plugin/*.lua tests/**/*.lua scripts/*.lua
 
-# ── Targets ──────────────────────────────────────────────────────────────────
+# ── Bootstrap test dependencies ───────────────────────────────────────────────
+
+## Install busted + nlua into the user luarocks tree (Lua 5.1)
+deps:
+	luarocks --lua-version 5.1 install busted
+	luarocks --lua-version 5.1 install nlua
+
+# ── Primary targets ───────────────────────────────────────────────────────────
 
 all: check
 
-## Run the full test suite with mini.test (headless Neovim)
+## Run the busted test suite via nlua (Neovim as Lua interpreter)
 test:
-	$(NVIM) --headless --noplugin -u scripts/minimal_init.lua \
-		-c "lua require('mini.test').run_file_test()" \
-		-c "lua vim.cmd('qa!')" \
-		2>&1 | tee /dev/stderr; \
-	$(NVIM) --headless --noplugin -u scripts/minimal_init.lua \
-		-l scripts/run_tests.lua
+	$(NLUA) scripts/run_busted.lua \
+		--output TAP \
+		tests/spec/
 
 ## Run luacheck static analysis
 lint:
-	$(LUACHECK) lua/ plugin/ --config .luacheckrc
+	$(LUACHECK) lua/ plugin/ tests/ scripts/ --config .luacheckrc
 
-## Format all Lua source files with stylua
+## Format all Lua source files with stylua (modifies in place)
 format:
-	$(STYLUA) lua/ plugin/ tests/
+	$(STYLUA) lua/ plugin/ tests/ scripts/
 
-## Check formatting without modifying files
+## Check formatting without modifying files (CI-safe)
 format-check:
-	$(STYLUA) --check lua/ plugin/ tests/
+	$(STYLUA) --check lua/ plugin/ tests/ scripts/
 
-## Run lint + format check (CI-safe, no modifications)
+## Run lint + format check (CI gate — no modifications)
 check: lint format-check
 
+# ── Housekeeping ─────────────────────────────────────────────────────────────
+
 clean:
-	rm -rf test-results/ coverage/
+	rm -rf test-results/ coverage/ deps/

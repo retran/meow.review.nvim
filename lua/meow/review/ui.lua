@@ -65,6 +65,105 @@ local function render_location(opts)
     end
 end
 
+-- ── Shared modal helper ───────────────────────────────────────────────────────
+
+--- Private helper that creates, mounts, and wires a nui Popup for annotation
+--- editing. Both open_add_modal and open_edit_modal delegate here.
+---
+--- `modal_opts` fields:
+---   top_label         string   — text for top border
+---   initial_type      string   — starting annotation type key
+---   initial_lines     string[] — lines pre-filled into the buffer (empty = blank)
+---   cursor_at_end     boolean  — if true place cursor after last char (edit mode)
+---   on_confirm        fun(type_name: string, text: string)
+---@param modal_opts table
+---@return nil
+local function open_modal(modal_opts)
+    local Popup = require("nui.popup")
+    local event = require("nui.utils.autocmd").event
+
+    local types = get_types()
+    local current_type = modal_opts.initial_type or types.order[1]
+
+    local popup = Popup({
+        position = "50%",
+        size = { width = 64, height = 6 },
+        enter = true,
+        focusable = true,
+        border = {
+            style = "rounded",
+            text = {
+                top = modal_opts.top_label or " Review Comment ",
+                top_align = "center",
+                bottom = render_type_line(current_type) .. "  [<C-s>] Save  [<Tab>] Type  [<C-c>] Cancel ",
+                bottom_align = "left",
+            },
+        },
+        win_options = {
+            winhighlight = "Normal:Normal,FloatBorder:FloatBorder",
+            wrap = true,
+        },
+        buf_options = {
+            modifiable = true,
+            filetype = "markdown",
+        },
+    })
+
+    popup:mount()
+
+    -- Pre-fill buffer when editing an existing annotation
+    local initial_lines = modal_opts.initial_lines or {}
+    if #initial_lines > 0 then
+        vim.api.nvim_buf_set_lines(popup.bufnr, 0, -1, false, initial_lines)
+    end
+
+    if modal_opts.cursor_at_end and #initial_lines > 0 then
+        local last = initial_lines[#initial_lines]
+        vim.api.nvim_win_set_cursor(popup.winid, { #initial_lines, #last })
+        vim.cmd("startinsert!")
+    else
+        vim.cmd("startinsert")
+    end
+
+    local dismissed = false
+    local function dismiss()
+        if not dismissed then
+            dismissed = true
+            vim.cmd("stopinsert")
+            popup:unmount()
+        end
+    end
+
+    local function confirm()
+        local lines = vim.api.nvim_buf_get_lines(popup.bufnr, 0, -1, false)
+        local text = vim.trim(table.concat(lines, "\n"))
+        dismiss()
+        if text ~= "" and modal_opts.on_confirm then
+            modal_opts.on_confirm(current_type, text)
+        end
+    end
+
+    popup:map("i", "<C-s>", confirm, { noremap = true })
+    popup:map("n", "<C-s>", confirm, { noremap = true })
+    popup:map("n", "<CR>", confirm, { noremap = true })
+
+    popup:map("i", "<Tab>", function()
+        current_type = types.next(current_type)
+        popup.border:set_text(
+            "bottom",
+            render_type_line(current_type) .. "  [<C-s>] Save  [<Tab>] Type  [<C-c>] Cancel "
+        )
+    end, { noremap = true })
+
+    popup:map("i", "<C-c>", dismiss, { noremap = true })
+    popup:map("n", "<Esc>", dismiss, { noremap = true })
+    popup:map("n", "q", dismiss, { noremap = true })
+
+    popup:on(event.BufLeave, function()
+        vim.schedule(dismiss)
+    end)
+end
+
 -- ── Add modal ─────────────────────────────────────────────────────────────────
 
 --- Open the add-comment modal (multiline editor).
@@ -76,89 +175,18 @@ end
 ---@param opts table `{ lnum, end_lnum, hunk, context_symbol, file, on_confirm }`
 --- `on_confirm(type_name: string, text: string)` is called on confirm.
 function M.open_add_modal(opts)
-    local Popup = require("nui.popup")
-    local event = require("nui.utils.autocmd").event
-
     local types = get_types()
-    local current_type = types.order[1]
-
     local location_str = render_location(opts)
     local context_str = opts.context_symbol and (" \u{2014} " .. opts.context_symbol) or ""
     local top_label = " Add Review Comment — " .. location_str:gsub("^ ", ""):gsub(" $", "") .. context_str .. " "
 
-    local popup = Popup({
-        position = "50%",
-        size = { width = 64, height = 6 },
-        enter = true,
-        focusable = true,
-        border = {
-            style = "rounded",
-            text = {
-                top = top_label,
-                top_align = "center",
-                bottom = render_type_line(current_type) .. "  [<C-s>] Save  [<Tab>] Type  [<C-c>] Cancel ",
-                bottom_align = "left",
-            },
-        },
-        win_options = {
-            winhighlight = "Normal:Normal,FloatBorder:FloatBorder",
-            wrap = true,
-        },
-        buf_options = {
-            modifiable = true,
-            filetype = "markdown",
-        },
+    open_modal({
+        top_label = top_label,
+        initial_type = types.order[1],
+        initial_lines = {},
+        cursor_at_end = false,
+        on_confirm = opts.on_confirm,
     })
-
-    popup:mount()
-
-    -- Start in insert mode
-    vim.cmd("startinsert")
-
-    local dismissed = false
-    local function dismiss()
-        if not dismissed then
-            dismissed = true
-            -- Ensure we return to normal mode in the underlying editor
-            vim.cmd("stopinsert")
-            popup:unmount()
-        end
-    end
-
-    local function confirm()
-        local lines = vim.api.nvim_buf_get_lines(popup.bufnr, 0, -1, false)
-        local text = vim.trim(table.concat(lines, "\n"))
-        dismiss()
-        if text ~= "" and opts.on_confirm then
-            opts.on_confirm(current_type, text)
-        end
-    end
-
-    -- <C-s>: confirm from insert or normal mode
-    popup:map("i", "<C-s>", confirm, { noremap = true })
-    popup:map("n", "<C-s>", confirm, { noremap = true })
-    -- <CR> in normal mode also confirms (Esc → Enter flow)
-    popup:map("n", "<CR>", confirm, { noremap = true })
-
-    -- <Tab> in insert mode: cycle type and update bottom border
-    popup:map("i", "<Tab>", function()
-        current_type = types.next(current_type)
-        popup.border:set_text(
-            "bottom",
-            render_type_line(current_type) .. "  [<C-s>] Save  [<Tab>] Type  [<C-c>] Cancel "
-        )
-    end, { noremap = true })
-
-    -- <C-c>: cancel from insert mode
-    popup:map("i", "<C-c>", dismiss, { noremap = true })
-    -- <Esc> in insert mode: go to normal mode (default Vim behavior — not mapped)
-    -- <Esc> / q in normal mode: cancel
-    popup:map("n", "<Esc>", dismiss, { noremap = true })
-    popup:map("n", "q", dismiss, { noremap = true })
-
-    popup:on(event.BufLeave, function()
-        vim.schedule(dismiss)
-    end)
 end
 
 -- ── Edit modal ────────────────────────────────────────────────────────────────
@@ -168,86 +196,15 @@ end
 ---@param annotation meow.review.Annotation
 ---@param on_confirm fun(type_name: string, text: string)
 function M.open_edit_modal(annotation, on_confirm)
-    local Popup = require("nui.popup")
-    local event = require("nui.utils.autocmd").event
-
-    local types = get_types()
-    local current_type = annotation.type or types.order[1]
-
-    local top_label = " Edit Review Comment "
-
-    local popup = Popup({
-        position = "50%",
-        size = { width = 64, height = 6 },
-        enter = true,
-        focusable = true,
-        border = {
-            style = "rounded",
-            text = {
-                top = top_label,
-                top_align = "center",
-                bottom = render_type_line(current_type) .. "  [<C-s>] Save  [<Tab>] Type  [<C-c>] Cancel ",
-                bottom_align = "left",
-            },
-        },
-        win_options = {
-            winhighlight = "Normal:Normal,FloatBorder:FloatBorder",
-            wrap = true,
-        },
-        buf_options = {
-            modifiable = true,
-            filetype = "markdown",
-        },
-    })
-
-    popup:mount()
-
-    -- Pre-fill with existing text
     local existing_lines = vim.split(annotation.text or "", "\n", { plain = true })
-    vim.api.nvim_buf_set_lines(popup.bufnr, 0, -1, false, existing_lines)
 
-    -- Place cursor at end of last line and enter insert mode
-    vim.api.nvim_win_set_cursor(popup.winid, { #existing_lines, #existing_lines[#existing_lines] })
-    vim.cmd("startinsert!")
-
-    local dismissed = false
-    local function dismiss()
-        if not dismissed then
-            dismissed = true
-            -- Ensure we return to normal mode in the underlying editor
-            vim.cmd("stopinsert")
-            popup:unmount()
-        end
-    end
-
-    local function confirm()
-        local lines = vim.api.nvim_buf_get_lines(popup.bufnr, 0, -1, false)
-        local text = vim.trim(table.concat(lines, "\n"))
-        dismiss()
-        if text ~= "" then
-            on_confirm(current_type, text)
-        end
-    end
-
-    popup:map("i", "<C-s>", confirm, { noremap = true })
-    popup:map("n", "<C-s>", confirm, { noremap = true })
-    popup:map("n", "<CR>", confirm, { noremap = true })
-
-    popup:map("i", "<Tab>", function()
-        current_type = types.next(current_type)
-        popup.border:set_text(
-            "bottom",
-            render_type_line(current_type) .. "  [<C-s>] Save  [<Tab>] Type  [<C-c>] Cancel "
-        )
-    end, { noremap = true })
-
-    popup:map("i", "<C-c>", dismiss, { noremap = true })
-    popup:map("n", "<Esc>", dismiss, { noremap = true })
-    popup:map("n", "q", dismiss, { noremap = true })
-
-    popup:on(event.BufLeave, function()
-        vim.schedule(dismiss)
-    end)
+    open_modal({
+        top_label = " Edit Review Comment ",
+        initial_type = annotation.type,
+        initial_lines = existing_lines,
+        cursor_at_end = true,
+        on_confirm = on_confirm,
+    })
 end
 
 -- ── View popup ────────────────────────────────────────────────────────────────

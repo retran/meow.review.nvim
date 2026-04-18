@@ -32,6 +32,12 @@ dependencies = {
     "nui.nvim",
 }
 
+test_dependencies = {
+    "busted",
+    "nlua",
+}
+
 build = {
     type = "builtin",
 }
+
