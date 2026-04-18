@@ -150,4 +150,25 @@ describe["add() IDs are non-empty strings"] = function()
     T.expect.equality(type(id), "string")
 end
 
+-- ── get_store_path ────────────────────────────────────────────────────────────
+
+describe["get_store_path returns a non-empty string"] = function()
+    local path = child.lua_get("require('meow.review.store').get_store_path('/some/root')")
+    T.expect.no_equality(path, nil)
+    T.expect.no_equality(path, "")
+end
+
+describe["get_store_path resolves relative store_path against provided root"] = function()
+    -- Default store_path is relative: .cache/meow-review/annotations.json
+    local path = child.lua_get("require('meow.review.store').get_store_path('/my/project')")
+    T.expect.equality(path, "/my/project/.cache/meow-review/annotations.json")
+end
+
+describe["get_store_path passes absolute store_path through unchanged"] = function()
+    child.lua("vim.g.meow_review = { store_path = '/absolute/path/store.json' }")
+    child.lua("package.loaded['meow.review.config.internal'] = nil")
+    local path = child.lua_get("require('meow.review.store').get_store_path('/ignored/root')")
+    T.expect.equality(path, "/absolute/path/store.json")
+end
+
 return describe

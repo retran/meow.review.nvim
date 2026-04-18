@@ -115,6 +115,14 @@ local function resolve_store_path(root)
     return root .. "/" .. p
 end
 
+--- Return the absolute path to the annotation store file for the given
+--- (or current) project root. Useful for health checks and tooling.
+---@param root string|nil
+---@return string
+function M.get_store_path(root)
+    return resolve_store_path(root or M.current_root())
+end
+
 --- Ensure all parent directories of `path` exist.
 ---@param path string
 local function ensure_parent_dirs(path)

@@ -204,11 +204,12 @@ local function check_store()
         vim.health.info("No annotations loaded (run :MeowReview add to create one)")
     end
 
-    local json_path = root .. "/.meow-review.json"
-    if vim.fn.filereadable(json_path) == 1 then
-        vim.health.ok(".meow-review.json found at project root")
+    local abs_store_path = store.get_store_path(root)
+
+    if vim.fn.filereadable(abs_store_path) == 1 then
+        vim.health.ok("Annotation store found: " .. abs_store_path)
     else
-        vim.health.info(".meow-review.json not found (will be created on first annotation)")
+        vim.health.info("Annotation store not found (will be created on first annotation): " .. abs_store_path)
     end
 
     return true
@@ -221,7 +222,7 @@ local function provide_troubleshooting_info()
     vim.health.info("Plugin directory: lua/meow/review/")
     vim.health.info("Configuration location: vim.g.meow_review")
     vim.health.info("Health check: :checkhealth meow.review")
-    vim.health.info("Annotation store: .meow-review.json (project root)")
+    vim.health.info("Annotation store: configurable via store_path (default: .cache/meow-review/annotations.json)")
     vim.health.info("Export output: .meow-review.md (project root) + system clipboard")
 
     vim.health.info([[
@@ -233,7 +234,7 @@ vim.g.meow_review = { context_lines = 5 }]])
 
     vim.health.info([[
 Common issues:
-1. Signs not appearing  — Run :MeowReview reload to re-render from .meow-review.json
+1. Signs not appearing  — Run :MeowReview reload to re-render from the annotation store
 2. Wrong project root   — Ensure the file is inside a git repo, or cwd is set correctly
 3. nui.nvim errors      — Run :checkhealth to verify nui.nvim is installed
 4. Export not working   — Check :messages for write errors on the project root path
