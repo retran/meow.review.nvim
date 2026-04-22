@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-04-22
+
+### Fixed
+
+- Position drift now works correctly end-to-end. `sync_extmark_positions()` is
+  now public and called before every position-sensitive operation: `goto`,
+  `next`, `prev`, `edit`, `delete`, `view`, and `resolve`. Previously, extmarks
+  tracked drift in the sign column but `ann.lnum` was only updated on save, so
+  jump-to-annotation and cursor-based lookups used stale line numbers.
+- `end_lnum` is now updated by the same drift offset as `lnum` when syncing
+  extmark positions, keeping multi-line annotation ranges correct after edits.
+
 ## [0.2.0] - 2026-04-22
 
 ### Added
@@ -66,6 +78,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial release.
 
-[Unreleased]: https://github.com/retran/meow.review.nvim/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/retran/meow.review.nvim/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/retran/meow.review.nvim/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/retran/meow.review.nvim/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/retran/meow.review.nvim/releases/tag/v0.1.0

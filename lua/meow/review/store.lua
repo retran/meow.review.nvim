@@ -236,14 +236,23 @@ end
 
 -- ── Persistence helpers ───────────────────────────────────────────────────────
 
---- Sync open-buffer extmark positions back into annotation lnums before saving.
-local function sync_extmark_positions()
+--- Sync open-buffer extmark positions back into annotation lnums.
+--- Also updates end_lnum by the same drift offset so multi-line ranges stay correct.
+--- Call before any position-sensitive operation (save, goto, view, delete, edit).
+function M.sync_extmark_positions()
     local ns = require("meow.review.signs").NS
     for _, ann in ipairs(state.annotations) do
         if ann.extmark_id and ann.bufnr and vim.api.nvim_buf_is_valid(ann.bufnr) then
             local pos = vim.api.nvim_buf_get_extmark_by_id(ann.bufnr, ns, ann.extmark_id, {})
             if pos and pos[1] then
-                ann.lnum = pos[1] + 1 -- extmarks are 0-based
+                local new_lnum = pos[1] + 1 -- extmarks are 0-based
+                if new_lnum ~= ann.lnum then
+                    local drift = new_lnum - ann.lnum
+                    ann.lnum = new_lnum
+                    if ann.end_lnum then
+                        ann.end_lnum = ann.end_lnum + drift
+                    end
+                end
             end
         end
     end
@@ -251,7 +260,7 @@ end
 
 --- Write all annotations to the configured store path under the project root.
 function M.save()
-    sync_extmark_positions()
+    M.sync_extmark_positions()
 
     local root = M.current_root()
     local path = resolve_store_path(root)
@@ -500,6 +509,7 @@ end
 --- Return annotations at the current cursor position.
 ---@return meow.review.Annotation[]
 function M.get_at_cursor()
+    M.sync_extmark_positions()
     local rel = M.current_file()
     if not rel then
         return {}

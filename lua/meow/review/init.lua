@@ -467,6 +467,7 @@ end
 ---@return boolean jumped
 function M._jump_to(ann)
     local s = store()
+    s.sync_extmark_positions()
     local root = s.current_root()
     local abs_path = root .. "/" .. ann.file
 
@@ -487,6 +488,7 @@ end
 --- Jump to the next annotation in sorted order (wraps around).
 function M.next_comment()
     local s = store()
+    s.sync_extmark_positions()
     local file = s.current_file() or ""
     local lnum = vim.api.nvim_win_get_cursor(0)[1]
 
@@ -519,6 +521,7 @@ end
 --- Jump to the previous annotation in sorted order (wraps around).
 function M.prev_comment()
     local s = store()
+    s.sync_extmark_positions()
     local file = s.current_file() or ""
     local lnum = vim.api.nvim_win_get_cursor(0)[1]
 
