@@ -1,4 +1,4 @@
-*meow-review.txt*	For Neovim >= 0.11.0	Last change: 2026 April 18
+*meow-review.txt*	For Neovim >= 0.11.0	Last change: 2026 April 22
 
 MEOW.REVIEW.NVIM					*meow.review* *meow-review*
 
@@ -150,7 +150,7 @@ QUICK START					*meow-review-quick-start*
 1. Open any file in a git repository.
 2. Position the cursor on a line to annotate.
 3. Run `:MeowReview add` or press your mapped key.
-4. In the modal, press `<Tab>` to cycle the annotation type, type your
+4. In the modal, press `<C-t>` to cycle the annotation type, type your
    comment, press `<C-s>` to save.
 5. The annotation appears in the sign column.
 6. Run `:MeowReview export` to export all annotations to Markdown.
@@ -352,7 +352,7 @@ Run `:MeowReview add` or press your mapped key. A multiline popup opens;
 the current annotation type is shown in the bottom border.
 
 Key		Mode		Action ~
-`<Tab>`		insert		Cycle annotation type
+`<C-t>`		insert		Cycle annotation type
 `<C-s>`		insert, normal	Confirm and save
 `<CR>`		normal		Confirm and save
 `<Esc>`		insert		Switch to normal mode

@@ -27,7 +27,7 @@ Part of the [project meow](https://github.com/retran/meow) plugin family.
 
 ## Screenshots
 
-> _Screenshots coming soon._
+![meow.review.nvim screenshot](assets/screenshots/screenshot.png)
 
 ---
 
@@ -277,6 +277,7 @@ The plugin ships with `<Plug>` mappings only — no default keymaps are set. Map
 | `(MeowReviewReload)` | `<leader>rr` | `n` | Reload annotations from JSON |
 | `(MeowReviewNext)` | `]r` | `n` | Jump to next annotation |
 | `(MeowReviewPrev)` | `[r` | `n` | Jump to previous annotation |
+| `(MeowReviewValidate)` | `<leader>rV` | `n` | Validate all annotations (check for stale snippets) |
 
 ### Commands
 

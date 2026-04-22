@@ -32,30 +32,14 @@ local M = {}
 local function check_neovim_version()
     vim.health.start("Neovim version")
 
-    local has_080 = vim.fn.has("nvim-0.8.0") == 1
-    local has_090 = vim.fn.has("nvim-0.9.0") == 1
-    local has_0100 = vim.fn.has("nvim-0.10.0") == 1
+    local has_0110 = vim.fn.has("nvim-0.11.0") == 1
 
-    if not has_080 then
-        vim.health.error("Neovim >= 0.8.0 is required")
+    if not has_0110 then
+        vim.health.error("Neovim >= 0.11.0 is required")
         return false
     end
 
-    local version_str = has_090 and tostring(vim.version()) or "0.8.x"
-
-    if has_0100 then
-        vim.health.ok("Neovim " .. version_str .. " (>= 0.10.0, full feature support)")
-    elseif has_090 then
-        vim.health.ok("Neovim " .. version_str .. " (>= 0.9.0)")
-        vim.health.warn("Neovim 0.10+ is recommended for the best experience")
-    else
-        vim.health.warn(
-            "Neovim "
-                .. version_str
-                .. " (0.8.x) — plugin is functional,"
-                .. " but some APIs (e.g. vim.iter) require 0.10+"
-        )
-    end
+    vim.health.ok("Neovim " .. tostring(vim.version()) .. " (>= 0.11.0)")
 
     return true
 end

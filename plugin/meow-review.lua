@@ -364,6 +364,13 @@ vim.keymap.set("n", "<Plug>(MeowReviewExportFile)", function()
     require("meow.review").export_current_file()
 end, { desc = "Export review for current file" })
 
+vim.keymap.set("n", "<Plug>(MeowReviewValidate)", function()
+    if not check_dependencies() then
+        return
+    end
+    require("meow.review").validate()
+end, { desc = "Validate annotations for staleness" })
+
 -- Sign and highlight initialisation (minimal overhead, no module load)
 vim.api.nvim_set_hl(0, "MeowReviewIssue", { link = "DiagnosticError", default = true })
 vim.api.nvim_set_hl(0, "MeowReviewSuggestion", { link = "DiagnosticWarn", default = true })

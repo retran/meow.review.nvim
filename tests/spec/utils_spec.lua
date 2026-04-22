@@ -33,4 +33,36 @@ describe("meow.review.utils", function()
             assert.equal("/workspace/myproject/.cache/meow-review/annotations.json", result)
         end)
     end)
+
+    describe("ensure_parent_dirs()", function()
+        local tmp_root
+
+        before_each(function()
+            tmp_root = vim.fn.tempname()
+        end)
+
+        after_each(function()
+            vim.fn.delete(tmp_root, "rf")
+        end)
+
+        it("creates missing parent directories", function()
+            local path = tmp_root .. "/a/b/c/file.json"
+            utils.ensure_parent_dirs(path)
+            assert.equal(1, vim.fn.isdirectory(tmp_root .. "/a/b/c"))
+        end)
+
+        it("does not error when parent directory already exists", function()
+            vim.fn.mkdir(tmp_root, "p")
+            local path = tmp_root .. "/file.json"
+            assert.has_no.errors(function()
+                utils.ensure_parent_dirs(path)
+            end)
+        end)
+
+        it("creates deeply nested directories in one call", function()
+            local path = tmp_root .. "/x/y/z/w/annotations.json"
+            utils.ensure_parent_dirs(path)
+            assert.equal(1, vim.fn.isdirectory(tmp_root .. "/x/y/z/w"))
+        end)
+    end)
 end)

@@ -112,6 +112,12 @@ function M.setup(opts)
     s.set_project_root(root)
     s.load(root)
 
+    -- Render signs for any buffers that are already open at setup time.
+    -- Deferred so the UI is fully ready (important with VeryLazy loading).
+    vim.schedule(function()
+        signs().render_all()
+    end)
+
     -- Re-render signs when entering a buffer that has annotations.
     -- Debounced 50 ms to avoid redundant work on rapid buffer switches.
     local _bufenter_timer = nil

@@ -125,10 +125,17 @@ function M.render_buffer(bufnr)
             ann.extmark_id = nil -- reset so place() creates a fresh one
             ann.bufnr = nil
 
-            -- Compute stale: annotation has a snippet and it differs from the current line.
-            if ann.snippet and ann.snippet ~= "" and not ann.hunk_head then
-                local cur = vim.api.nvim_buf_get_lines(bufnr, ann.lnum - 1, ann.lnum, false)
-                ann.stale = (cur[1] ~= nil) and (vim.trim(cur[1]) ~= vim.trim(ann.snippet))
+            -- Compute stale: compare the first snippet line (after stripping the
+            -- "NNN: " line-number prefix) against the current file content at
+            -- snippet_start. Mirrors the logic in validate.lua so that signs and
+            -- the validate command agree on staleness.
+            if ann.snippet and ann.snippet ~= "" and ann.snippet_start and not ann.hunk_head then
+                local first_snippet_line = ann.snippet:match("^[^\n]*") or ""
+                first_snippet_line = first_snippet_line:gsub("^%s*%d+:%s?", "")
+                first_snippet_line = vim.trim(first_snippet_line)
+                local cur = vim.api.nvim_buf_get_lines(bufnr, ann.snippet_start - 1, ann.snippet_start, false)
+                local file_line = vim.trim(cur[1] or "")
+                ann.stale = first_snippet_line ~= "" and file_line ~= "" and first_snippet_line ~= file_line
             else
                 ann.stale = false
             end

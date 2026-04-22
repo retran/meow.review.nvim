@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.2.0] - 2026-04-18
+## [0.2.0] - 2026-04-22
 
 ### Added
 
@@ -49,11 +49,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Modal improvements**: `modal_width`, `modal_height`, `modal_cycle_key`
   config options. Rich top border label in `open_edit_modal` (`file:line[–end][  symbol]`).
 - **Picker adapters**: Snacks → Telescope → fzf-lua → nui.menu fallback chain.
-- **Test infrastructure**: busted + nlua, 100 passing tests.
+- **Test infrastructure**: busted + nlua, 103 passing tests.
+
+### Fixed
+
+- Sign column marks not rendering for already-open buffers on startup (missing
+  `render_all()` call after `setup()` loaded annotations).
+- Stale detection in `signs.lua` always marking annotations as stale due to
+  comparing raw buffer line against the full multi-line snippet string.
+- `:checkhealth` reporting wrong minimum Neovim version (was 0.8/0.9/0.10;
+  corrected to 0.11.0).
+- `doc/meow-review.txt` incorrectly documenting `<Tab>` as the modal cycle key
+  (correct default is `<C-t>`).
 
 ## [0.1.0] - 2026-04-12
 
 Initial release.
 
-[Unreleased]: https://github.com/retran/meow.review.nvim/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/retran/meow.review.nvim/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/retran/meow.review.nvim/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/retran/meow.review.nvim/releases/tag/v0.1.0
