@@ -132,6 +132,9 @@ function M.setup(opts)
             local bufnr = vim.api.nvim_get_current_buf()
             _bufenter_timer = vim.defer_fn(function()
                 _bufenter_timer = nil
+                if not vim.api.nvim_buf_is_valid(bufnr) then
+                    return
+                end
                 local abs = vim.api.nvim_buf_get_name(bufnr)
                 if abs == "" then
                     return
